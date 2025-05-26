@@ -1,7 +1,6 @@
 # shaeantoine.io 🚀 
 
 This repo is dedicated for my personal website. It's built using FastAPI and Uvicorn and it's published on Render. It's very much a work in progress. I expect to be periodically adding styling and content upgrades. 
----
 
 ## Project Structure 📁 
 
@@ -18,7 +17,8 @@ This repo is dedicated for my personal website. It's built using FastAPI and Uvi
 ├── requirements.txt           
 └── README.md
 
---
+```
+
 ## Setup (if you wanted to run it locally lol) 
 ```bash
 python -m venv venv
