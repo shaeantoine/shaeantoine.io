@@ -1,7 +1,10 @@
 services:
   - type: web
-    name: fastapi-example
-    runtime: python
-    plan: free
-    autoDeploy: false
-    buildCommand: 
+    name: shaeantoine.io
+    env: static
+    buildCommand: echo "No build required"
+    staticPublishPath: ./
+    routes:
+      - type: rewrite
+        source: /about
+        destination: /about.html
