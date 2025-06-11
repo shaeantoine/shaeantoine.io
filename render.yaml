@@ -1,29 +1,7 @@
-# services:
-#   - type: web
-#     name: shaeantoine.io
-#     env: python
-#     plan: free
-#     buildCommand: "pip install -r requirements.txt"
-#     startCommand: "cd app && uvicorn main:app --host 0.0.0.0 --port 10000 --log-level debug"
-#     autoDeploy: true
-#     envVars: []
-
-# services:
-#   - type: web
-#     name: shaeantoine.io
-#     env: python
-#     plan: free
-#     buildCommand: "pip install -r requirements.txt"
-#     startCommand: "python test_start.py && uvicorn app.main:app --host 0.0.0.0 --port 10000"
-#     autoDeploy: true
-#     envVars: []
-
 services:
-  # A Docker web service
   - type: web
     name: fastapi-example
     runtime: python
     plan: free
     autoDeploy: false
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: 
