@@ -14,7 +14,8 @@ This repo is dedicated for my personal website. It's built using FastAPI and Uvi
 │       ├── css/
 │       ├── js/
 │       └── images/
-├── requirements.txt           
+├── requirements.txt         
+├── render.yaml           
 └── README.md
 
 ```
