@@ -31,20 +31,37 @@
 
 # print("=== DEBUG: All routes configured ===")
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 
-print("=== STARTING FASTAPI APP ===")
+
+# from fastapi import FastAPI
+# from fastapi.responses import HTMLResponse
+
+# print("=== STARTING FASTAPI APP ===")
+
+# app = FastAPI()
+
+# @app.get("/")
+# async def root():
+#     print("=== ROOT ENDPOINT HIT ===")
+#     return {"message": "Hello World"}
+
+# @app.get("/health")
+# async def health():
+#     return {"status": "ok"}
+
+# print("=== FASTAPI APP CONFIGURED ===")
+
+from typing import Optional
+
+from fastapi import FastAPI
 
 app = FastAPI()
 
+
 @app.get("/")
 async def root():
-    print("=== ROOT ENDPOINT HIT ===")
     return {"message": "Hello World"}
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-print("=== FASTAPI APP CONFIGURED ===")
+@app.get("/items/{item_id}")
+def read_item(item_id: int, q: Optional[str] = None):
+    return {"item_id": item_id, "q": q}
