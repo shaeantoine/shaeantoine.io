@@ -1,16 +1,32 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+import os
 
-print("FastAPI app is starting...")
-app = FastAPI() 
+print("=== DEBUG: FastAPI app is starting... ===")
+print(f"=== DEBUG: Current working directory: {os.getcwd()} ===")
+print(f"=== DEBUG: Directory contents: {os.listdir('.')} ===")
+
+app = FastAPI()
+print("=== DEBUG: FastAPI instance created ===")
+
+# Check if templates directory exists
+if os.path.exists("templates"):
+    print(f"=== DEBUG: Templates directory found: {os.listdir('templates')} ===")
+else:
+    print("=== DEBUG: Templates directory NOT found ===")
 
 templates = Jinja2Templates(directory="templates")
+print("=== DEBUG: Jinja2Templates configured ===")
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request): 
+    print("=== DEBUG: Root endpoint called ===")
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/about", response_class=HTMLResponse)
 async def about(request: Request): 
+    print("=== DEBUG: About endpoint called ===")
     return templates.TemplateResponse("about.html", {"request": request})
+
+print("=== DEBUG: All routes configured ===")
