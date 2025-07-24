@@ -4,7 +4,7 @@
   "description": "A JS front-end for the web hosted mini LLM ",
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
