@@ -1,16 +1,10 @@
-const http = require('http');
-import { add } from './wasm-loader.js';
-
-const hostname = "127.0.0.1";
-const port = 3000;
-
-const server = http.createServer((req, res) => {
-    res.writeHead(200, {
-        'Content-type': 'application/json'
-    });
-    res.end(`Hello, World! The output of the imported zig method is: ${wasm_loader.add(1,2)}`);
+const response = await fetch('add.wasm');
+const wasmBytes = await response.arrayBuffer();
+const { instance } = await WebAssembly.instantiate(wasmBytes, {
+  env: {print: (result) => { console.log(`The result is ${result}`); }} 
 });
 
-server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`)
-});
+const wasm = instance.exports;
+
+console.log("WASM loaded!");
+console.log(wasm.add(1,2));
