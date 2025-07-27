@@ -1,24 +1,39 @@
 const std = @import("std.zig");
-const game_globals = @import("game_globals.zig");
+extern fn getWindowWidth() u32;
+extern fn getWindowHeight() u32;
+extern fn getMouseX() f32; 
+extern fn getMouseY() f32;
+extern fn setCursorPosition() void; 
 
 const Cursor= struct {
     x: f32,
     y: f32,
-    cursor_speed: i32,
-    cursor_radius: i32,
+    cursor_speed: f32,
+    cursor_radius: f32,
+    window_width: f32,
+    window_height: f32,
 
-    pub fn init(x: f32, y: f32) Cursor {
+    pub fn init() Cursor {
+        const window_width = @as(f32, getWindowWidth());
+        const window_height = @as(f32, getWindowHeight());
+
+        const x = window_width / 2.0;
+        const y = window_height / 2.0;
+
+        // Not sure about this method call 
+        setCursorPosition(x, y);
+
         return Cursor {
             .x = x,
             .y = y,
-            .cursor_speed = 5,
-            .cursor_radius = 20
+            .cursor_speed = 5.0,
+            .cursor_radius = 20.0
         };
     }
 
-    pub fn move_cursor(self: *Cursor, obs: [4]i32) !void {
-        const target_x: f32 = game_globals.width * obs[1];
-        const target_y: f32 = game_globals.height * obs[2];
+    pub fn move_cursor(self: *Cursor) !void {
+        const target_x: f32 = getMouseX();
+        const target_y: f32 = getMouseY();
 
         const dx: f32 = self.x - target_x;
         const dy: f32 = self.y - target_y;
@@ -27,20 +42,20 @@ const Cursor= struct {
         if (distance > 100) {
             var angle: f32 = std.math.atan2(dy, dx);
             angle += std.rand.floatNorm(); // Different than Python implementation
-            self.x += self.cursor_speed * std.cos(angle);
-            self.y += self.cursor_speed * std.sine(angle);
+            self.x += self.cursor_speed * std.math.cos(angle);
+            self.y += self.cursor_speed * std.math.sin(angle);
         }
 
         self.clamp_to_window();
     }  
 
     fn clamp_to_window(self: *Cursor) !void {
-        self.x = std.math.floatMax(self.cursor_radius, std.math.floatMin(game_globals.width - self.cursor_radius, self.x));
-        self.y = std.math.floatMax(self.cursor_radius, std.math.floatMin(game_globals.height - self.cursor_radius, self.y));
+        self.x = std.math.floatMax(self.cursor_radius, std.math.floatMin(self.window_width - self.cursor_radius, self.x));
+        self.y = std.math.floatMax(self.cursor_radius, std.math.floatMin(self.window_height - self.cursor_radius, self.y));
     }
     
     pub fn respawn_randomly(self: *Cursor) !void {
-        self.x = std.rand.intRangeAtMost(self.cursor_radius, game_globals.width - self.cursor_radius);
-        self.y = std.rand.intRangeAtMost(self.cursor_radius, game_globals.height - self.cursor_radius);
+        self.x = std.rand.intRangeAtMost(self.cursor_radius, self.window_width - self.cursor_radius);
+        self.y = std.rand.intRangeAtMost(self.cursor_radius, self.window_height - self.cursor_radius);
     }
 };
