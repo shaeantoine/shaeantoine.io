@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zig-JS Game</title>
+    <title>Catch the Dot</title>
     <style>
         body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #333; }
         canvas { border: 2px solid #ccc; background-color: #000; }
@@ -12,58 +12,6 @@
 <body>
     <canvas id="gameCanvas" width="1280" height="720"></canvas>
     <script type="module" src="game.js"></script>
-    <script type="module">
-        // This is where you would typically load your WASM module (e.g., your Zig code).
-        // For this example, we'll just demonstrate the JS game state setup.
-        //
-        // Example WASM loading (uncomment and adapt if you have a Zig WASM module):
-        /*
-        import { game } from './game.js'; // Assuming game.js exports gameManager as 'game'
-
-        async function loadWasm() {
-            const zigWasmPath = 'your_zig_module.wasm'; // Path to your compiled Zig WASM
-            try {
-                const { instance } = await WebAssembly.instantiateStreaming(fetch(zigWasmPath), {
-                    env: {
-                        // Expose functions from game.js for Zig to call
-                        getPlayerX: game.getPlayerX,
-                        getPlayerY: game.getPlayerY,
-                        setPlayerPosition: game.setPlayerPosition,
-                        getLevelWidth: game.getLevelWidth,
-                        getLevelHeight: game.getLevelHeight,
-                        getPlayerSpeed: game.getPlayerSpeed,
-                        setPlayerHealth: game.setPlayerHealth,
-                        getEnemyCount: game.getEnemyCount,
-                        getEnemyX: game.getEnemyX,
-                        getEnemyY: game.getEnemyY,
-                        setEnemyPosition: game.setEnemyPosition,
-                        getScore: game.getScore,
-                        setScore: game.setScore,
-                        getIsGameOver: game.getIsGameOver,
-                        setGameOver: game.setGameOver,
-                        // Add more as needed
-                    }
-                });
-                console.log("WASM module loaded successfully.", instance.exports);
-
-                // If Zig has an init function, call it here
-                // if (instance.exports.init) {
-                //     instance.exports.init();
-                // }
-
-                // Example: Call a Zig function from JS
-                // if (instance.exports.updatePlayer) {
-                //    game.setZigUpdateFunction(instance.exports.updatePlayer);
-                // }
-
-            } catch (error) {
-                console.error("Failed to load or instantiate WASM module:", error);
-            }
-        }
-
-        // Call this when the DOM is ready, after the GameManager is initialized
-        document.addEventListener('DOMContentLoaded', loadWasm);
-        */
-    </script>
+    <script type="module" src="wasm_loader.js"></script>
 </body>
 </html>

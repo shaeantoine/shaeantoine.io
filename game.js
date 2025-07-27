@@ -1,6 +1,4 @@
-
-
-class GameManager {
+export class GameManager {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) {
@@ -41,13 +39,15 @@ class GameManager {
         });
 
         this.gameLoop = this.gameLoop.bind(this);
-        this.zigCursorStepFn = null;
+        
+        this.initCursor = null;
+        this.updateCursor = null;
+        this.respawnCursor = null;
     }
 
     getCursorX = () => this.gameState.player.x; 
     getCursorY = () => this.gameState.player.y;
     getCursorRadius = () => this.gameState.player.cursor_radius;
-    
     
     setCursorPosition = (x,y) => {
         this.gameState.player.x = x;
@@ -63,42 +63,20 @@ class GameManager {
     getIsGameOver = () => this.gameState.isGameOver;
     setGameover = (isOver) => {this.gameState.isGameOver = isOver;}; 
 
-    setZigCursorStepFn() {
-        this.zigCursorStepFn = fn;
+    setInitCursor(fn) {
+        this.initCursor = fn;
     }
 
-    observe = () => {
-        const cx = this.gameState.player.x;
-        const cy = this.gameState.player.y;
-        const px = this.mouseX;
-        const py = this.mouseY;
+    setUpdateCursor(fn) {
+        this.updateCursor = fn;
+    }
 
-        const dx = cx - px;
-        const dy = cy - py;
-        const distance = Math.hypot(dx, dy);
-
-        return [
-            cx / this.gameState.level.width,
-            cy / this.gameState.level.height,
-            px / this.gameState.level.width,
-            py / this.gameState.level.height,
-            distance / (this.gameState.level.width + this.gameState.level.height)
-        ];
-    };
+    setRespawnCursor(fn) {
+        this.respawnCursor = fn;
+    }
 
     update(deltaTime) {
         if (this.gameState.isGameOver) return; 
-
-        const obs = this.observe();
-
-        if (this.zigCursorStepFn) {
-            this.zigCursorStepFn(
-                obs[0], obs[1], obs[2], obs[3], obs[4], deltaTime / 1000
-            );
-        } else {
-            console.error(`Zig step function failed.`);
-            return null;
-        }
 
         const mouse_px = obs[2] * this.gameState.level.width;
         const mouse_py = obs[3] * this.gameState.level.height;
@@ -109,7 +87,7 @@ class GameManager {
         // If caught increment score and continue
         if (distance_check < this.gameState.player.cursor_radius) {
             this.gameState.score += 1;
-            this.respawnPlayerRandomly();
+            this.respawnCursor();
         }
     }
 
@@ -147,7 +125,7 @@ class GameManager {
         this.update(deltaTime); 
         this.render();
 
-        this.animationFrameId = requestAnimationFrame(this.gaemLoop);
+        this.animationFrameId = requestAnimationFrame(this.gameLoop);
     }
 
     startLoop() {
