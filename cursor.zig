@@ -12,8 +12,8 @@ var x: f32 = 0.0;
 var y: f32 = 0.0;
 const cursor_speed: f32 = 5.0;
 const cursor_radius: f32 = 20.0;
-const seed = @as(u64, std.time.nanoTimestamp());
-var prng = std.Random.DefaultPrng.init(2);
+const seed = @as(u64, std.time.nanoTimestamp()); // FIX THIS
+var prng = std.Random.DefaultPrng.init(2); // FIX THIS
 
 export fn init() void {
     window_width = @as(f32, getWindowWidth()); //type may generate errors
