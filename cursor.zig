@@ -12,8 +12,7 @@ var x: f32 = 0.0;
 var y: f32 = 0.0;
 const cursor_speed: f32 = 5.0;
 const cursor_radius: f32 = 20.0;
-const seed = @as(u64, std.time.nanoTimestamp()); // FIX THIS
-var prng = std.Random.DefaultPrng.init(2); // FIX THIS
+const prng = std.Random.init(); // This is buggy 
 
 export fn init() void {
     window_width = @as(f32, getWindowWidth()); //type may generate errors
@@ -32,8 +31,8 @@ export fn move_cursor() void {
     const distance: f32 = std.math.hypot(dx, dy);
 
     if (distance > 100) {
-        var angle: f32 = std.math.atan2(dy, dx);
-        angle += std.Random.floatNorm(prng, f32); // not quite right
+        const angle: f32 = std.math.atan2(dy, dx);
+        //angle += std.Random.floatNorm(prng, f32); // not quite right
         x += cursor_speed * std.math.cos(angle);
         y += cursor_speed * std.math.sin(angle);
     }
@@ -43,13 +42,13 @@ export fn move_cursor() void {
 }
 
 fn clamp_to_window() void {
-    x = std.math.floatMax(cursor_radius, std.math.floatMin(window_width - cursor_radius, x));
-    y = std.math.floatMax(cursor_radius, std.math.floatMin(window_height - cursor_radius, y));
+    x = @max(cursor_radius, @min(window_width - cursor_radius, x));
+    y = @max(cursor_radius, @min(window_height - cursor_radius, y));
     setCursorPosition(x, y);
 }
 
 export fn respawn_randomly() void {
     x = std.Random.intRangeAtMost(prng, f32, cursor_radius, window_width - cursor_radius);
-    y = prng.intRangeAtMost(prng, f32, cursor_radius, window_height - cursor_radius);
+    x = std.Random.intRangeAtMost(prng, f32, cursor_radius, window_height - cursor_radius);
     setCursorPosition(x, y);
 }
