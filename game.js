@@ -14,6 +14,7 @@ export class GameManager {
 
         this.lastTime = 0;
         this.animationFrameId = null;
+        this.isRespawning = false;
 
         this.gameState = {
             cursor : {
@@ -30,8 +31,8 @@ export class GameManager {
             isGameOver: false,
         }
 
-        this.mouseX = this.canvas.width / 2;
-        this.mouseY = this.canvas.height / 2;
+        this.mouseX = 0;
+        this.mouseY = 0;
 
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
@@ -77,7 +78,6 @@ export class GameManager {
 
     update(deltaTime) {
         if (this.gameState.isGameOver) return; 
-        this.updateCursor(deltaTime / 100);
         
         const mouse_px = this.mouseX;
         const mouse_py = this.mouseY;
@@ -85,10 +85,27 @@ export class GameManager {
         const dy_check = this.gameState.cursor.y - mouse_py;
         const distance_check = Math.hypot(dx_check, dy_check);
 
+        let collisionOccurredThisFrame = false;
+
         // If caught increment score and continue
         if (distance_check < this.gameState.cursor.radius) {
             this.gameState.score += 1;
-            this.respawnCursor();
+            if (!this.isRespawning) {
+                this.isRespawning = true;
+                this.respawnCursor();
+                collisionOccurredThisFrame = true;
+                setTimeout(() => {
+                    this.isRespawning = false;
+                }, 100);
+            } else if (this.isRespawning) {
+                collisionOccurredThisFrame = true;
+            } else {
+                console.warn("Zig respawn function not yet loaded or assigned.");
+            }
+        }
+
+        if (!this.isRespawning && !collisionOccurredThisFrame) {
+            this.updateCursor(deltaTime / 100);
         }
     }
 
