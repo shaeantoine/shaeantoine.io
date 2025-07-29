@@ -16,10 +16,10 @@ export class GameManager {
         this.animationFrameId = null;
 
         this.gameState = {
-            player : {
+            cursor : {
                 x: this.canvas.width / 2,
                 y: this.canvas.height / 2,
-                cursor_radius: 20,
+                radius: 20,
             },
             level : {
                 width: this.canvas.width,
@@ -30,8 +30,6 @@ export class GameManager {
             isGameOver: false,
         }
 
-        this.mouseX = 0;
-        this.mouseY = 0; 
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left; 
@@ -45,20 +43,18 @@ export class GameManager {
         this.respawnCursor = null;
     }
 
-    getCursorX = () => this.gameState.player.x; 
-    getCursorY = () => this.gameState.player.y;
-    getCursorRadius = () => this.gameState.player.cursor_radius;
-    
+    getCursorX = () => this.gameState.cursor.x; 
+    getCursorY = () => this.gameState.cursor.y;
     setCursorPosition = (x,y) => {
-        this.gameState.player.x = x;
-        this.gameState.player.y = y;
+        this.gameState.cursor.x = x;
+        this.gameState.cursor.y = y;
     }
 
     getWindowWidth = () => this.gameState.level.width;
     getWindowHeight = () => this.gameState.level.height;
 
     getScore = () => this.gameState.score;
-    getScore = (s) => {this.gameState.score = s;};
+    setScore = (s) => {this.gameState.score = s;};
 
     getIsGameOver = () => this.gameState.isGameOver;
     setGameover = (isOver) => {this.gameState.isGameOver = isOver;}; 
@@ -75,31 +71,31 @@ export class GameManager {
         this.respawnCursor = fn;
     }
 
-    update(deltaTime) {
+    update() {
         if (this.gameState.isGameOver) return; 
 
-        const mouse_px = obs[2] * this.gameState.level.width;
-        const mouse_py = obs[3] * this.gameState.level.height;
-        const dx_check = this.gameState.player.x - mouse_px;
-        const dy_check = this.gameState.player.y - mouse_py;
+        const mouse_px = this.mouseX;
+        const mouse_py = this.mouseY;
+        const dx_check = this.gameState.cursor.x - mouse_px;
+        const dy_check = this.gameState.cursor.y - mouse_py;
         const distance_check = Math.hypot(dx_check, dy_check);
 
         // If caught increment score and continue
-        if (distance_check < this.gameState.player.cursor_radius) {
+        if (distance_check < this.gameState.cursor.radius) {
             this.gameState.score += 1;
             this.respawnCursor();
         }
     }
 
     render() {
-        this.xtc.clearRect(0,0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
 
         this.ctx.fillStyle = this.gameState.level.background;
         this.ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
 
-        const cursor_x = this.gameState.player.x;
-        const cursor_y = this.gameState.player.y;
-        const cursor_radius = this.gameState.player.cursor_radius; 
+        const cursor_x = this.gameState.cursor.x;
+        const cursor_y = this.gameState.cursor.y;
+        const cursor_radius = this.gameState.cursor.radius; 
 
         this.ctx.beginPath();
         this.ctx.arc(cursor_x, cursor_y, cursor_radius, 0, Math.PI * 2);
