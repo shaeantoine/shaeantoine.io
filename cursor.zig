@@ -48,5 +48,7 @@ fn clamp_to_window() void {
 export fn respawn() void {
     // x = std.Random.intRangeAtMost(rand, f32, cursor_radius, window_width - cursor_radius);
     // y = std.Random.intRangeAtMost(rand, f32, cursor_radius, window_height - cursor_radius);
-    setCursorPosition(window_width / 2,window_height / 2);
+    x = window_width / 2;
+    y = window_height / 2;
+    setCursorPosition(x,y);
 }
