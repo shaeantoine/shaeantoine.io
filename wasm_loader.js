@@ -1,50 +1,38 @@
-// wasm_loader.js
-
-// Import the 'game' instance from game.js
 import { game } from './game.js';
 
 async function loadWasm() {
-    const zigWasmPath = 'cursor.wasm'; // <-- IMPORTANT: Update this path!
+    const zigWasmPath = 'cursor.wasm';
     try {
-        // Define the import object with functions Zig can call
         const importObject = {
             env: {
-                getAICursorX: game.getAICursorX,
-                getAICursorY: game.getAICursorY,
-                getAICursorRadius: game.getAICursorRadius,
-                setAICursorPosition: game.setAICursorPosition,
+                getMouseX: game.getMouseX,
+                getMouseY: game.getMouseY,
                 getWindowWidth: game.getWindowWidth,
                 getWindowHeight: game.getWindowHeight,
-                getScore: game.getScore,
-                setScore: game.setScore,
-                getIsGameOver: game.getIsGameOver,
-                setGameOver: game.setGameOver,
+                setCursorPosition: game.setCursorPosition,
             }
         };
 
         const { instance } = await WebAssembly.instantiateStreaming(fetch(zigWasmPath), importObject);
         console.log("WASM module loaded successfully.", instance.exports);
 
-        // --- Pass Zig's Exported Functions to GameManager ---
-        // These are the functions that the JS GameManager will call.
-        if (instance.exports.update_ai_cursor) {
-            game.setZigUpdateAICursorFunction(instance.exports.update_ai_cursor);
+        if (instance.exports.move_cursor) {
+            game.updateCursor(instance.exports.move_cursor);
         } else {
-            console.warn("Zig function 'update_ai_cursor' not exported or named differently.");
+            console.warn("Zig function 'move_cursor' not exported or named differently.");
         }
 
-        if (instance.exports.respawn_ai_cursor) {
-            game.setZigRespawnAICursorFunction(instance.exports.respawn_ai_cursor);
+        if (instance.exports.respawn) {
+            game.setRespawnCursor(instance.exports.respawn);
         } else {
-            console.warn("Zig function 'respawn_ai_cursor' not exported or named differently.");
+            console.warn("Zig function 'respawn' not exported or named differently.");
         }
 
-        if (instance.exports.init_ai_cursor) {
-            game.setZigInitAICursorFunction(instance.exports.init_ai_cursor);
-            // Call Zig's init function once it's available and the game is running
-            instance.exports.init_ai_cursor();
+        if (instance.exports.init) {
+            game.setInitCursor(instance.exports.init);
+            instance.exports.init();
         } else {
-            console.warn("Zig function 'init_ai_cursor' not exported or named differently.");
+            console.warn("Zig function 'init' not exported or named differently.");
         }
 
     } catch (error) {
