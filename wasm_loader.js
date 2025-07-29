@@ -17,7 +17,7 @@ async function loadWasm() {
         console.log("WASM module loaded successfully.", instance.exports);
 
         if (instance.exports.move_cursor) {
-            game.updateCursor(instance.exports.move_cursor);
+            game.setUpdateCursor(instance.exports.move_cursor);
         } else {
             console.warn("Zig function 'move_cursor' not exported or named differently.");
         }

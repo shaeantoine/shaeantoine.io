@@ -3,13 +3,13 @@ export class GameManager {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) {
             console.error(`Canvas with ID '${canvasId}' not found. Cannot initialize GameManager.`);
-            return null;
+            throw new Error(`Canvas with ID '${canvasId}' not found.`);
         }
 
         this.ctx = this.canvas.getContext('2d');
         if (!this.ctx) {
             console.error(`2D rendering context not available. Cannot initialize GameManager.`);
-            return null;
+            throw new Error(`2D rendering context not available.`);
         }
 
         this.lastTime = 0;
@@ -30,6 +30,9 @@ export class GameManager {
             isGameOver: false,
         }
 
+        this.mouseX = this.canvas.width / 2;
+        this.mouseY = this.canvas.height / 2;
+
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left; 
@@ -43,12 +46,13 @@ export class GameManager {
         this.respawnCursor = null;
     }
 
-    getCursorX = () => this.gameState.cursor.x; 
-    getCursorY = () => this.gameState.cursor.y;
     setCursorPosition = (x,y) => {
         this.gameState.cursor.x = x;
         this.gameState.cursor.y = y;
     }
+
+    getMouseX = () => this.mouseX;
+    getMouseY = () => this.mouseY;
 
     getWindowWidth = () => this.gameState.level.width;
     getWindowHeight = () => this.gameState.level.height;
@@ -71,9 +75,10 @@ export class GameManager {
         this.respawnCursor = fn;
     }
 
-    update() {
+    update(deltaTime) {
         if (this.gameState.isGameOver) return; 
-
+        this.updateCursor(deltaTime / 100);
+        
         const mouse_px = this.mouseX;
         const mouse_py = this.mouseY;
         const dx_check = this.gameState.cursor.x - mouse_px;
@@ -109,6 +114,12 @@ export class GameManager {
         this.ctx.fill();
         this.ctx.closePath();
 
+        this.ctx.beginPath();
+        this.ctx.arc(this.mouseX, this.mouseY, 5, 0, Math.PI * 2);
+        this.ctx.fillStyle = 'blue';
+        this.ctx.fill();
+        this.ctx.closePath();
+
         this.ctx.fillStyle = 'white';
         this.ctx.font = '36px Arial';
         this.ctx.fillText(`Score: ${this.gameState.score}`, 10, 40);
@@ -141,12 +152,12 @@ export class GameManager {
     }
 }
 
-let gameManagerInstance = null;
 
+export const game = new GameManager('gameCanvas'); 
 document.addEventListener('DOMContentLoaded', () => {
-    gameManagerInstance = new GameManager('gameCanvas');
-    if (gameManagerInstance && gameManagerInstance.canvas) {
-        gameManagerInstance.startLoop();
-        window.game = gameManagerInstance;
+    if (game && game.canvas && game.ctx) {
+        game.startLoop();
+    } else {
+        console.error("GameManager could not be fully initialized. Check console for previous errors.");
     }
 })
