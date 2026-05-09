@@ -4,3 +4,6 @@
 # Build files
 main
 main.o
+
+# Mac files
+.DS_Store
