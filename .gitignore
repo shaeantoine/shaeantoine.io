@@ -1,6 +1,29 @@
-# Cache
-.zig-cache
+# Zig
+.zig-cache/
+zig-out/
+*.wasm.o
 
-# Build files
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Build artifacts
 main
 main.o
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
+
+# Dependencies
+node_modules/
+
+# Claude
+.claude
+
+# Venv
+.venv

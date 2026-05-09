@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: dio
+    env: static
+    buildCommand: echo "No build required"
+    staticPublishPath: ./
+    headers:
+      - path: /model.wasm
+        name: Content-Type
+        value: application/wasm
+      - path: /weights/*
+        name: Cache-Control
+        value: public, max-age=86400
