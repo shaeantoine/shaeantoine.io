@@ -1,0 +1,291 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&family=Playfair+Display:ital,wght@0,400;1,400&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #0a0a0a;
+    --text: #d4d0cb;
+    --dim: #5a5a5a;
+    --bright: #ffffff;
+    --font-nav: 'IBM Plex Mono', monospace;
+    --font-read: 'Playfair Display', Georgia, serif;
+    --content-width: 38em;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-read);
+    font-size: 1.125rem;
+    line-height: 1.8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+}
+
+main {
+    max-width: var(--content-width);
+    width: 100%;
+}
+
+/* --- Typography --- */
+
+h1, h2, h3 {
+    font-family: var(--font-nav);
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    color: var(--text);
+}
+
+h1 {
+    font-size: 1rem;
+    margin-bottom: 3rem;
+    color: var(--dim);
+}
+
+h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    margin-bottom: 1.5rem;
+}
+
+p {
+    margin-bottom: 1.5rem;
+}
+
+/* --- Links --- */
+
+a {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--dim);
+    transition: text-decoration-color 0.2s;
+}
+
+a:hover {
+    text-decoration-color: var(--bright);
+    color: var(--bright);
+}
+
+/* --- Landing --- */
+
+.landing-prose {
+    margin-top: 2rem;
+}
+
+.landing-prose p {
+    margin-bottom: 2rem;
+}
+
+/* --- Gateway (essay/project list pages) --- */
+
+.gateway-list {
+    list-style: none;
+    margin-top: 2rem;
+}
+
+.gateway-list li {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.gateway-list li:last-child {
+    border-bottom: none;
+}
+
+.gateway-list a {
+    display: block;
+    font-family: var(--font-nav);
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+.gateway-list .description {
+    font-size: 0.95rem;
+    color: var(--dim);
+    line-height: 1.6;
+}
+
+/* --- Exits (contextual navigation at page end) --- */
+
+.exits {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid #1a1a1a;
+    font-family: var(--font-nav);
+    font-size: 0.8rem;
+    color: var(--dim);
+    line-height: 2;
+}
+
+.exits a {
+    color: var(--dim);
+    text-decoration-color: #2a2a2a;
+}
+
+.exits a:hover {
+    color: var(--text);
+    text-decoration-color: var(--dim);
+}
+
+/* --- Paradox Footer --- */
+
+#paradox {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-nav);
+    font-size: 0.7rem;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+}
+
+/* --- Article/Essay styles --- */
+
+article {
+    margin-top: 1rem;
+}
+
+article p {
+    margin-bottom: 1.6rem;
+}
+
+article blockquote {
+    border-left: 1px solid var(--dim);
+    padding-left: 1.5rem;
+    margin: 2rem 0;
+    color: var(--dim);
+    font-style: italic;
+}
+
+article code {
+    font-family: var(--font-nav);
+    font-size: 0.85em;
+    background: #141414;
+    padding: 0.15em 0.4em;
+    border-radius: 2px;
+}
+
+article pre {
+    background: #141414;
+    padding: 1.5rem;
+    overflow-x: auto;
+    margin: 2rem 0;
+    border-radius: 2px;
+    font-family: var(--font-nav);
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+/* --- Reading List --- */
+
+.reading-list {
+    list-style: none;
+}
+
+.reading-list li {
+    margin-bottom: 1.2rem;
+    font-size: 1rem;
+}
+
+.reading-list .author {
+    font-family: var(--font-nav);
+    font-size: 0.75rem;
+    color: var(--dim);
+    margin-left: 0.5rem;
+}
+
+/* --- Page Transition --- */
+
+main {
+    animation: arrive 0.4s ease-out;
+}
+
+@keyframes arrive {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Selection --- */
+
+::selection {
+    background: #2a2a2a;
+    color: var(--bright);
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 600px) {
+    body {
+        padding: 3rem 1.5rem;
+        font-size: 1rem;
+        justify-content: flex-start;
+        padding-top: 4rem;
+    }
+
+    h1 {
+        margin-bottom: 2rem;
+    }
+
+    h2 {
+        margin-bottom: 1.2rem;
+    }
+
+    .landing-prose p {
+        margin-bottom: 1.6rem;
+    }
+
+    .gateway-list li {
+        margin-bottom: 1.2rem;
+        padding-bottom: 1.2rem;
+    }
+
+    .exits {
+        margin-top: 3rem;
+        line-height: 2.4;
+    }
+
+    #paradox {
+        font-size: 0.6rem;
+        bottom: 1rem;
+    }
+
+    article pre {
+        padding: 1rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 380px) {
+    body {
+        padding: 2.5rem 1.2rem;
+    }
+
+    .exits a {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+}
