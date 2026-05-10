@@ -3,675 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIO — Self-Improving Transformer</title>
+    <title>Catch the Dot</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Courier New', monospace;
             background: #0a0a0a;
             color: #ccc;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            height: 100vh;
             overflow: hidden;
+            cursor: none;
         }
 
-        /* Header */
-        .header {
-            padding: 0.6rem 1.5rem;
-            border-bottom: 1px solid #1a1a1a;
+        .layout {
             display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            flex-shrink: 0;
+            height: 100vh;
         }
-        .header h1 { color: #fff; font-size: 1.1rem; letter-spacing: 0.15em; }
-        .header .status { color: #4af; font-size: 0.75rem; }
-        .header .status.error { color: #f44; }
-        .header .meta { margin-left: auto; font-size: 0.7rem; color: #555; }
 
-        /* Main split */
-        .main { display: flex; flex: 1; overflow: hidden; }
-
-        /* === LEFT: Chat Panel === */
-        .chat-panel {
+        /* Game area */
+        .game-panel {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #1a1a1a;
+            position: relative;
             min-width: 0;
         }
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.25rem;
-        }
-        .message { margin-bottom: 1.25rem; }
-        .message-role {
-            font-size: 0.65rem;
-            color: #444;
-            margin-bottom: 0.2rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .message-text {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            line-height: 1.65;
-            font-size: 0.85rem;
-        }
-        .message.user .message-text { color: #e2ddd8; }
-        .message.model .message-text { color: #7bc8f6; }
-        .message.generating .message-text { opacity: 0.7; }
-
-        .message-actions { margin-top: 0.4rem; display: flex; gap: 0.4rem; }
-        .btn-sm {
-            background: transparent;
-            border: 1px solid #2a2a2a;
-            color: #555;
-            font-family: inherit;
-            font-size: 0.65rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .btn-sm:hover { border-color: #4af; color: #aaa; }
-        .btn-sm.active { border-color: #2c6; color: #2c6; }
-
-        .edit-area {
+        #game-canvas {
             width: 100%;
-            background: #0f0f0f;
-            border: 1px solid #4af;
-            color: #e2ddd8;
-            font-family: inherit;
-            font-size: 0.85rem;
-            padding: 0.6rem;
-            margin-top: 0.4rem;
-            border-radius: 3px;
-            resize: vertical;
-            min-height: 50px;
-            line-height: 1.65;
+            height: 100%;
+            display: block;
         }
-        .edit-area:focus { outline: none; }
 
-        .input-area {
-            padding: 0.75rem 1.25rem;
-            border-top: 1px solid #1a1a1a;
-            display: flex;
-            gap: 0.6rem;
-            flex-shrink: 0;
-        }
-        .input-area input {
-            flex: 1;
-            background: #0f0f0f;
-            border: 1px solid #2a2a2a;
-            color: #e2ddd8;
-            font-family: inherit;
-            font-size: 0.85rem;
-            padding: 0.5rem 0.8rem;
-            border-radius: 4px;
-        }
-        .input-area input:focus { outline: none; border-color: #4af; }
-        .input-area input:disabled { opacity: 0.4; }
-        .input-area button {
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            color: #999;
-            font-family: inherit;
-            font-size: 0.8rem;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .input-area button:hover { border-color: #4af; color: #fff; }
-        .input-area button:disabled { opacity: 0.3; cursor: default; }
-
-        .controls-bar {
-            padding: 0.4rem 1.25rem;
-            border-top: 1px solid #1a1a1a;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            font-size: 0.7rem;
-            color: #444;
-            flex-shrink: 0;
-        }
-        .controls-bar label { display: flex; align-items: center; gap: 0.3rem; }
-        .controls-bar input[type="range"] { width: 50px; }
-        .controls-bar .val { color: #666; min-width: 1.5rem; }
-        .controls-bar button {
-            background: transparent;
-            border: 1px solid #2a2a2a;
-            color: #555;
-            font-family: inherit;
-            font-size: 0.65rem;
-            padding: 0.15rem 0.4rem;
-            border-radius: 3px;
-            cursor: pointer;
-            margin-left: auto;
-        }
-        .controls-bar button:hover { border-color: #f44; color: #f44; }
-
-        /* === RIGHT: Visualization Panel === */
+        /* Viz sidebar */
         .viz-panel {
-            width: 42%;
-            min-width: 320px;
+            width: 300px;
+            border-left: 1px solid #1a1a1a;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            padding: 0.75rem;
-            gap: 0.6rem;
+            background: #080808;
         }
-
         .viz-section {
-            background: #0f0f0f;
-            border: 1px solid #1a1a1a;
-            border-radius: 4px;
-            padding: 0.75rem;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid #111;
             flex-shrink: 0;
         }
         .viz-section h3 {
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             color: #444;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
         }
-
-        /* Architecture Graph */
-        .viz-graph {
-            flex: 0 0 auto;
-            max-height: 300px;
-            overflow: hidden;
-        }
-        .viz-graph svg { display: block; }
-
-        /* Canvas panels */
-        .viz-canvas-wrap {
-            position: relative;
-        }
-        .viz-canvas-wrap canvas {
+        .viz-section canvas {
             width: 100%;
-            height: 130px;
             display: block;
             border-radius: 2px;
         }
-        .viz-canvas-wrap.tall canvas { height: 160px; }
-        .viz-canvas-wrap.short canvas { height: 100px; }
-
-        /* Attention controls */
-        .attn-controls {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 0.4rem;
+        #graph-container {
+            width: 100%;
+            height: 160px;
         }
-        .attn-controls button {
-            background: transparent;
-            border: 1px solid #2a2a2a;
+        #weights-canvas { height: 70px; }
+        #loss-canvas { height: 90px; }
+        #activations-canvas { height: 70px; }
+        #stats-canvas { height: 85px; }
+
+        .viz-section.flash {
+            background: rgba(68, 170, 255, 0.03);
+            transition: background 0.1s;
+        }
+
+        /* Header bar */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .header h1 {
+            font-size: 0.85rem;
+            color: #fff;
+            letter-spacing: 0.15em;
+            pointer-events: auto;
+        }
+        .header .status {
+            font-size: 0.7rem;
             color: #555;
-            font-family: inherit;
-            font-size: 0.6rem;
-            padding: 0.15rem 0.4rem;
-            border-radius: 2px;
-            cursor: pointer;
         }
-        .attn-controls button:hover, .attn-controls button.active {
-            border-color: #4af;
-            color: #4af;
-        }
-
-        /* Weight component selector */
-        .weight-selector {
+        .header .controls {
+            margin-left: auto;
             display: flex;
-            gap: 0.3rem;
-            margin-bottom: 0.4rem;
-            flex-wrap: wrap;
+            gap: 0.75rem;
+            pointer-events: auto;
         }
-        .weight-selector button {
-            background: transparent;
-            border: 1px solid #1a1a1a;
-            color: #444;
+        .header button {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #888;
             font-family: inherit;
-            font-size: 0.55rem;
-            padding: 0.1rem 0.35rem;
-            border-radius: 2px;
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
             cursor: pointer;
+            border-radius: 2px;
         }
-        .weight-selector button:hover, .weight-selector button.active {
-            border-color: #4af;
-            color: #4af;
-        }
-
-        /* Training pulse */
-        .training-pulse {
-            animation: pulse 0.6s ease-in-out;
-        }
-        @keyframes pulse {
-            0% { border-color: #1a1a1a; }
-            50% { border-color: #f84; }
-            100% { border-color: #1a1a1a; }
+        .header button:hover {
+            color: #ccc;
+            border-color: #555;
         }
 
-        /* Responsive */
-        @media (max-width: 900px) {
-            .main { flex-direction: column; }
-            .viz-panel { width: 100%; min-width: 0; max-height: 40vh; border-top: 1px solid #1a1a1a; }
-            .chat-panel { border-right: none; }
+        /* Difficulty indicator */
+        .difficulty-bar {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .difficulty-bar span {
+            font-size: 0.65rem;
+            color: #333;
+        }
+        .difficulty-meter {
+            width: 120px;
+            height: 3px;
+            background: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .difficulty-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4af, #f84);
+            transition: width 0.5s ease;
+        }
+
+        /* Mobile: stack vertically, show game on top */
+        @media (max-width: 800px) {
+            .layout { flex-direction: column; }
+            .viz-panel {
+                width: 100%;
+                max-height: 35vh;
+                border-left: none;
+                border-top: 1px solid #1a1a1a;
+                flex-direction: row;
+                flex-wrap: wrap;
+                overflow-x: auto;
+            }
+            .viz-section {
+                min-width: 200px;
+                flex: 1;
+            }
+            #graph-container { height: 120px; }
+            body { cursor: auto; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>DIO</h1>
-        <div class="status" id="status">Loading model...</div>
-        <div class="meta" id="meta"></div>
-    </div>
+    <div class="layout">
+        <div class="game-panel">
+            <canvas id="game-canvas"></canvas>
 
-    <div class="main">
-        <!-- Chat Panel -->
-        <div class="chat-panel">
-            <div class="messages" id="messages"></div>
-            <div class="controls-bar">
-                <label>temp <input type="range" id="temperature" min="0.1" max="2.0" step="0.1" value="0.8"><span class="val" id="temp-val">0.8</span></label>
-                <label>len <input type="range" id="max-tokens" min="20" max="300" step="10" value="100"><span class="val" id="tokens-val">100</span></label>
-                <button id="reset-btn">reset model</button>
+            <div class="header">
+                <h1>CATCH THE DOT</h1>
+                <div class="status" id="status">loading brain...</div>
+                <div class="controls">
+                    <button id="reset-btn">new brain</button>
+                </div>
             </div>
-            <div class="input-area">
-                <input type="text" id="user-input" placeholder="Say something..." disabled>
-                <button id="send-btn" disabled>Send</button>
+
+            <div class="difficulty-bar">
+                <span>difficulty</span>
+                <div class="difficulty-meter">
+                    <div class="difficulty-fill" id="difficulty-fill"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Visualization Panel -->
         <div class="viz-panel">
-            <!-- Network Architecture Graph -->
-            <div class="viz-section viz-graph">
-                <h3>Network Architecture</h3>
+            <div class="viz-section" id="graph-section">
+                <h3>Network</h3>
                 <div id="graph-container"></div>
             </div>
-
-            <!-- Attention Heatmap -->
-            <div class="viz-section">
-                <h3>Attention Patterns</h3>
-                <div class="attn-controls" id="attn-controls">
-                    <button class="active" data-layer="0" data-head="0">L0 H0</button>
-                    <button data-layer="0" data-head="1">L0 H1</button>
-                    <button data-layer="1" data-head="0">L1 H0</button>
-                    <button data-layer="1" data-head="1">L1 H1</button>
-                </div>
-                <div class="viz-canvas-wrap">
-                    <canvas id="attention-canvas"></canvas>
-                </div>
+            <div class="viz-section" id="stats-section">
+                <h3>Stats</h3>
+                <canvas id="stats-canvas"></canvas>
             </div>
-
-            <!-- Weight Matrix -->
-            <div class="viz-section">
-                <h3>Weight Matrix</h3>
-                <div class="weight-selector" id="weight-selector">
-                    <button class="active" data-layer="0" data-comp="0">L0 Q</button>
-                    <button data-layer="0" data-comp="1">L0 K</button>
-                    <button data-layer="0" data-comp="2">L0 V</button>
-                    <button data-layer="0" data-comp="3">L0 Out</button>
-                    <button data-layer="0" data-comp="4">L0 FFN↑</button>
-                    <button data-layer="0" data-comp="5">L0 FFN↓</button>
-                    <button data-layer="1" data-comp="0">L1 Q</button>
-                    <button data-layer="1" data-comp="4">L1 FFN↑</button>
-                </div>
-                <div class="viz-canvas-wrap">
-                    <canvas id="weights-canvas"></canvas>
-                </div>
+            <div class="viz-section" id="loss-section">
+                <h3>Loss</h3>
+                <canvas id="loss-canvas"></canvas>
             </div>
-
-            <!-- Loss Curve -->
-            <div class="viz-section">
-                <h3>Loss Curve</h3>
-                <div class="viz-canvas-wrap short">
-                    <canvas id="loss-canvas"></canvas>
-                </div>
+            <div class="viz-section" id="weights-section">
+                <h3>Weights</h3>
+                <canvas id="weights-canvas"></canvas>
             </div>
-
-            <!-- Token Probabilities -->
-            <div class="viz-section">
-                <h3>Token Probabilities</h3>
-                <div class="viz-canvas-wrap tall">
-                    <canvas id="probs-canvas"></canvas>
-                </div>
+            <div class="viz-section" id="activations-section">
+                <h3>Activations</h3>
+                <canvas id="activations-canvas"></canvas>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { Engine } from './js/engine.js';
+        import { Game } from './js/game.js';
+        import { Brain } from './js/brain.js';
+        import { Viz } from './js/viz.js';
         import { Persistence } from './js/persistence.js';
-        import { Visualization } from './js/viz.js';
 
-        const engine = new Engine();
+        const canvas = document.getElementById('game-canvas');
+        const statusEl = document.getElementById('status');
+        const difficultyFill = document.getElementById('difficulty-fill');
+        const game = new Game(canvas);
+        const brain = new Brain();
         const persistence = new Persistence();
         let viz = null;
 
-        const statusEl = document.getElementById('status');
-        const metaEl = document.getElementById('meta');
-        const messagesEl = document.getElementById('messages');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const tempSlider = document.getElementById('temperature');
-        const tempVal = document.getElementById('temp-val');
-        const tokensSlider = document.getElementById('max-tokens');
-        const tokensVal = document.getElementById('tokens-val');
-
-        let generating = false;
-        let corrections = 0;
-        let saveTimer = null;
-
-        tempSlider.addEventListener('input', () => tempVal.textContent = tempSlider.value);
-        tokensSlider.addEventListener('input', () => tokensVal.textContent = tokensSlider.value);
+        let catchCount = 0;
+        let reinforceCounter = 0;
+        let vizFrameCounter = 0;
+        let loadedFromSave = false;
 
         async function init() {
             try {
                 await persistence.init();
-                const { loadedFromCheckpoint } = await engine.init(persistence);
+                await brain.init();
 
-                viz = new Visualization(engine, {
+                // Try to restore saved weights
+                const saved = await persistence.loadWeights();
+                if (saved && saved.weights) {
+                    try {
+                        brain.loadWeights(saved.weights);
+                        catchCount = saved.catches || 0;
+                        game.score = catchCount;
+                        game.bestStreak = saved.bestStreak || 0;
+                        loadedFromSave = true;
+                        statusEl.textContent = `resumed · ${catchCount} catches · step ${saved.trainSteps || 0}`;
+                    } catch (e) {
+                        console.warn('Failed to load saved weights:', e);
+                    }
+                }
+
+                if (!loadedFromSave) {
+                    statusEl.textContent = `mlp loaded · ${brain.totalParams} params`;
+                }
+
+                // Restore stats
+                const stats = persistence.loadStats();
+                if (stats) {
+                    game.bestStreak = Math.max(game.bestStreak, stats.bestStreak || 0);
+                }
+
+                // Initialize visualization
+                viz = new Viz(brain, {
                     graph: document.getElementById('graph-container'),
-                    attention: document.getElementById('attention-canvas'),
                     weights: document.getElementById('weights-canvas'),
                     loss: document.getElementById('loss-canvas'),
-                    probs: document.getElementById('probs-canvas'),
+                    activations: document.getElementById('activations-canvas'),
+                    stats: document.getElementById('stats-canvas'),
                 });
+                viz.initGraph();
+                viz.redrawAll(game);
 
-                viz.redrawAll();
-                setupVizControls();
+                // Wire brain to game
+                game.moveFn = (obs) => brain.forward(obs);
 
-                // Restore session
-                const history = persistence.loadChatHistory();
-                const meta = persistence.loadSessionMeta();
-                corrections = meta.corrections || 0;
+                // On catch: train + save + update viz
+                game.onCatch = ({ score, obs, framesSurvived }) => {
+                    catchCount = score;
 
-                if (history.length > 0) {
-                    history.forEach(msg => renderMessage(msg.role, msg.text));
-                    statusEl.textContent = loadedFromCheckpoint
-                        ? `Resumed (${corrections} corrections, step ${meta.totalSteps || 0})`
-                        : 'Model ready';
-                } else {
-                    showWelcome();
-                    statusEl.textContent = 'Model ready';
-                }
+                    const result = brain.trainWithReplay(obs, 0.02, 8);
+                    const loss = result.losses[result.losses.length - 1];
 
-                updateMeta();
-                userInput.disabled = false;
-                sendBtn.disabled = false;
-                userInput.focus();
-            } catch (e) {
-                statusEl.textContent = `Error: ${e.message}`;
-                statusEl.classList.add('error');
-                console.error(e);
-            }
-        }
+                    statusEl.textContent = `catch #${score} · loss: ${loss.toFixed(4)} · step ${brain.getTrainingStep()}`;
 
-        function showWelcome() {
-            const welcome = document.createElement('div');
-            welcome.className = 'message system';
-            welcome.innerHTML = `
-                <div class="message-role">dio</div>
-                <div class="message-text" style="color:#666">I'm a tiny transformer (105K params) trained on Shakespeare.
-I generate text character by character — you can watch my internals on the right.
+                    // Difficulty meter
+                    const avgSurvival = score > 0 ? game.totalFramesSurvived / score : 0;
+                    const difficulty = Math.min(100, avgSurvival / 5);
+                    difficultyFill.style.width = `${difficulty}%`;
 
-Type anything, and I'll respond. Then:
-  • click "edit & teach" to correct my output and train me
-  • click "good" to reinforce what I said
-  • watch the loss curve drop as I learn
+                    // Dot color shifts as it learns (blue → purple → red)
+                    const t = Math.min(1, score / 40);
+                    const r = Math.round(68 + t * 180);
+                    const g = Math.round(170 - t * 100);
+                    const b = Math.round(255 - t * 150);
+                    game.dotColor = `rgb(${r},${g},${b})`;
 
-My weights persist in your browser — I'll remember what you taught me.</div>`;
-            messagesEl.appendChild(welcome);
-        }
+                    // Viz update
+                    if (viz) {
+                        viz.onCatch(loss, framesSurvived);
+                        viz.drawStats(game);
+                        flashPanels();
+                    }
 
-        function setupVizControls() {
-            document.getElementById('attn-controls').addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                document.querySelectorAll('#attn-controls button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                viz.drawAttention(parseInt(btn.dataset.layer), parseInt(btn.dataset.head));
-            });
+                    // Save weights after each catch
+                    saveState();
+                };
 
-            document.getElementById('weight-selector').addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                document.querySelectorAll('#weight-selector button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                viz.selectComponent(parseInt(btn.dataset.layer), parseInt(btn.dataset.comp));
-            });
-        }
+                // On frame: reinforce + update viz
+                game.onFrame = (obs) => {
+                    reinforceCounter++;
+                    vizFrameCounter++;
 
-        function renderMessage(role, text, options = {}) {
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-            if (options.generating) div.classList.add('generating');
-
-            const roleLabel = document.createElement('div');
-            roleLabel.className = 'message-role';
-            roleLabel.textContent = role === 'user' ? 'you' : 'dio';
-
-            const textEl = document.createElement('div');
-            textEl.className = 'message-text';
-            textEl.textContent = text;
-
-            div.appendChild(roleLabel);
-            div.appendChild(textEl);
-
-            if (role === 'model' && !options.generating) {
-                addMessageActions(div, textEl, text);
-            }
-
-            messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-            return { div, textEl };
-        }
-
-        function addMessageActions(div, textEl, text) {
-            const actions = document.createElement('div');
-            actions.className = 'message-actions';
-
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btn-sm';
-            editBtn.textContent = 'edit & teach';
-            editBtn.addEventListener('click', () => enterEditMode(div, textEl, text));
-
-            const goodBtn = document.createElement('button');
-            goodBtn.className = 'btn-sm';
-            goodBtn.textContent = 'good';
-            goodBtn.addEventListener('click', () => {
-                engine.reinforce(text);
-                goodBtn.classList.add('active');
-                goodBtn.textContent = 'reinforced';
-                updateMeta();
-                viz.drawLoss();
-                scheduleSave();
-            });
-
-            actions.appendChild(editBtn);
-            actions.appendChild(goodBtn);
-            div.appendChild(actions);
-        }
-
-        function enterEditMode(messageDiv, textEl, originalText) {
-            if (messageDiv.querySelector('.edit-area')) return;
-
-            const textarea = document.createElement('textarea');
-            textarea.className = 'edit-area';
-            textarea.value = originalText;
-            messageDiv.appendChild(textarea);
-            textarea.focus();
-
-            const btnRow = document.createElement('div');
-            btnRow.style.cssText = 'margin-top:0.3rem;display:flex;gap:0.4rem';
-
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'btn-sm';
-            saveBtn.textContent = 'train on this';
-
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'btn-sm';
-            cancelBtn.textContent = 'cancel';
-
-            btnRow.appendChild(saveBtn);
-            btnRow.appendChild(cancelBtn);
-            messageDiv.appendChild(btnRow);
-
-            cancelBtn.addEventListener('click', () => {
-                textarea.remove();
-                btnRow.remove();
-            });
-
-            saveBtn.addEventListener('click', async () => {
-                const corrected = textarea.value;
-                if (corrected && corrected !== originalText) {
-                    statusEl.textContent = 'Training...';
-                    corrections++;
-
-                    document.querySelector('.viz-panel').querySelectorAll('.viz-section').forEach(s => {
-                        s.classList.add('training-pulse');
-                        setTimeout(() => s.classList.remove('training-pulse'), 600);
-                    });
-
-                    const result = engine.train(corrected, {
-                        learningRate: 0.001,
-                        steps: 3,
-                        onStep: ({ step, loss }) => {
-                            viz.onTrainingStep(step, loss);
-                            statusEl.textContent = `Training step ${step + 1}/3 — loss: ${loss.toFixed(4)}`;
+                    // Reinforce when close but surviving — only if output is not saturated
+                    if (obs.distance < 100 && reinforceCounter % 30 === 0) {
+                        const output = brain.forward(obs);
+                        const mag = Math.hypot(output[0], output[1]);
+                        if (mag < 0.95) {
+                            brain.reinforce(obs, 0.005, 1);
                         }
-                    });
+                    }
 
-                    textEl.textContent = corrected;
-                    const finalLoss = result.losses[result.losses.length - 1];
-                    statusEl.textContent = `Trained (loss: ${finalLoss?.toFixed(4) || '?'})`;
-                    updateMeta();
-                    viz.onIdle();
-                    viz.drawWeightDeltas();
+                    if (viz && vizFrameCounter % 4 === 0) {
+                        viz.onFrame(game);
+                    }
 
-                    saveChat();
-                    persistence.saveSessionMeta({ totalSteps: engine.getTrainingStep(), corrections });
-                    scheduleSave();
-                }
-                textarea.remove();
-                btnRow.remove();
+                    if (viz && vizFrameCounter % 30 === 0) {
+                        viz.drawStats(game);
+                    }
+                };
+
+                game.start();
+            } catch (e) {
+                statusEl.textContent = `error: ${e.message}`;
+                console.error(e);
+                game.start();
+            }
+        }
+
+        async function saveState() {
+            const weights = brain.exportWeights();
+            if (weights) {
+                await persistence.saveWeights(weights, {
+                    catches: catchCount,
+                    trainSteps: brain.getTrainingStep(),
+                    bestStreak: game.bestStreak
+                });
+            }
+            persistence.saveStats({
+                catches: catchCount,
+                bestStreak: game.bestStreak,
+                trainSteps: brain.getTrainingStep()
             });
         }
 
-        async function send() {
-            if (generating) return;
-            const text = userInput.value.trim();
-            if (!text) return;
-
-            generating = true;
-            sendBtn.disabled = true;
-            userInput.value = '';
-
-            renderMessage('user', text);
-            const { div, textEl } = renderMessage('model', '', { generating: true });
-            statusEl.textContent = 'Generating...';
-
-            engine.reset();
-            const contextTokens = engine.tokenizer.encode(text);
-            for (const token of contextTokens) {
-                engine.wasm.forward(token);
-            }
-
-            const maxTokens = parseInt(tokensSlider.value);
-            const temperature = parseFloat(tempSlider.value);
-            let generated = '';
-            let tokenCount = 0;
-
-            function genNext() {
-                if (tokenCount >= maxTokens) { finish(); return; }
-
-                const nextToken = engine.wasm.sample(temperature);
-                const char = engine.tokenizer.decode([nextToken]);
-                generated += char;
-                textEl.textContent = generated;
-
-                viz.onInferenceToken(tokenCount);
-
-                engine.wasm.forward(nextToken);
-                tokenCount++;
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-                requestAnimationFrame(genNext);
-            }
-
-            genNext();
-
-            function finish() {
-                generating = false;
-                sendBtn.disabled = false;
-                div.classList.remove('generating');
-                statusEl.textContent = `Generated ${tokenCount} tokens`;
-                viz.onIdle();
-
-                addMessageActions(div, textEl, generated);
-                saveChat();
-            }
+        function flashPanels() {
+            const sections = document.querySelectorAll('.viz-section');
+            sections.forEach(s => {
+                s.classList.add('flash');
+                setTimeout(() => s.classList.remove('flash'), 300);
+            });
         }
 
-        // === PERSISTENCE ===
-
-        function saveChat() {
-            persistence.saveChatHistory(
-                Array.from(messagesEl.querySelectorAll('.message:not(.system)')).map(m => ({
-                    role: m.classList.contains('user') ? 'user' : 'model',
-                    text: m.querySelector('.message-text').textContent,
-                    timestamp: Date.now()
-                }))
-            );
-        }
-
-        function scheduleSave() {
-            if (saveTimer) clearTimeout(saveTimer);
-            saveTimer = setTimeout(async () => {
-                const weights = engine.exportWeights();
-                if (weights) {
-                    await persistence.saveCheckpoint(weights, null, {
-                        totalSteps: engine.getTrainingStep(),
-                        corrections
-                    });
-                    console.log('Checkpoint saved');
-                }
-            }, 2000);
-        }
-
-        function updateMeta() {
-            const steps = engine.getTrainingStep?.() || 0;
-            metaEl.textContent = `steps: ${steps} · corrections: ${corrections}`;
-        }
-
-        // === EVENTS ===
-
-        sendBtn.addEventListener('click', send);
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !generating) send();
-        });
-        resetBtn.addEventListener('click', async () => {
-            if (confirm('Reset model to base Shakespeare weights? All training progress will be lost.')) {
-                await persistence.clearAll();
-                location.reload();
+        document.getElementById('reset-btn').addEventListener('click', async () => {
+            if (!confirm('Reset brain? The dot will forget everything it learned.')) return;
+            await persistence.clearAll();
+            await brain.init();
+            game.reset();
+            game.dotColor = '#4af';
+            catchCount = 0;
+            reinforceCounter = 0;
+            vizFrameCounter = 0;
+            difficultyFill.style.width = '0%';
+            statusEl.textContent = 'brain reset · new weights';
+            if (viz) {
+                viz.lossHistory = [];
+                viz.survivalHistory = [];
+                viz.redrawAll(game);
             }
         });
 
-        window.addEventListener('resize', () => { if (viz) viz.redrawAll(); });
+        window.addEventListener('resize', () => {
+            if (viz) viz.redrawAll(game);
+        });
 
-        // Save before unload
         window.addEventListener('beforeunload', () => {
-            const weights = engine.exportWeights();
-            if (weights) {
-                // Best-effort save (may not complete)
-                persistence.saveCheckpoint(weights, null, {
-                    totalSteps: engine.getTrainingStep(),
-                    corrections
-                });
-            }
+            saveState();
         });
 
         init();

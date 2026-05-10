@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dio
+    name: catch-the-dot
     env: static
     buildCommand: echo "No build required"
     staticPublishPath: ./
@@ -8,6 +8,6 @@ services:
       - path: /model.wasm
         name: Content-Type
         value: application/wasm
-      - path: /weights/*
+      - path: /model.wasm
         name: Cache-Control
-        value: public, max-age=86400
+        value: public, max-age=604800

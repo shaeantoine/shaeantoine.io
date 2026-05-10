@@ -1,288 +1,187 @@
-// Visualization dashboard: SVG architecture graph + Canvas panels
-// Renders the transformer's internals in real-time during inference and training
+// Visualization: SVG network graph + Canvas panels for MLP game
+// Shows network architecture, weights, loss curve, and activations in real-time
 
-export class Visualization {
-    constructor(engine, containers) {
-        this.engine = engine;
+export class Viz {
+    constructor(brain, containers) {
+        this.brain = brain;
         this.containers = containers;
-        this.state = 'idle'; // idle | inferring | training
-        this.activeLayer = 0;
-        this.activeComponent = 0; // 0=Q, 1=K, 2=V, 3=out, 4=ffn_up, 5=ffn_down
         this.lossHistory = [];
-        this.animationFrame = null;
-        this.inferenceStep = -1;
-        this.trainingStep = -1;
-
-        this.initArchitectureGraph();
-        this.initCanvases();
+        this.catchTimes = [];
+        this.survivalHistory = [];
     }
 
-    // === SVG ARCHITECTURE GRAPH ===
+    // === SVG NETWORK GRAPH ===
 
-    initArchitectureGraph() {
+    initGraph() {
         const el = this.containers.graph;
         if (!el) return;
+        el.innerHTML = '';
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 280 460');
+        svg.setAttribute('viewBox', '0 0 240 200');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
-        svg.style.maxHeight = '400px';
+        svg.style.display = 'block';
 
-        this.graphNodes = {};
-        this.graphEdges = [];
+        this.nodes = { input: [], h1: [], h2: [], output: [] };
+        this.edges = [];
+        this.nodeElements = [];
 
-        const nodes = [
-            { id: 'emb', label: 'Embeddings', y: 20, type: 'embed' },
-            { id: 'ln1_0', label: 'LayerNorm 1', y: 80, type: 'norm', layer: 0 },
-            { id: 'attn_0', label: 'Attention', y: 130, type: 'attn', layer: 0 },
-            { id: 'res1_0', label: '+', y: 175, type: 'residual', layer: 0 },
-            { id: 'ln2_0', label: 'LayerNorm 2', y: 210, type: 'norm', layer: 0 },
-            { id: 'ffn_0', label: 'FFN', y: 260, type: 'ffn', layer: 0 },
-            { id: 'res2_0', label: '+', y: 300, type: 'residual', layer: 0 },
-            { id: 'ln1_1', label: 'LayerNorm 1', y: 335, type: 'norm', layer: 1 },
-            { id: 'attn_1', label: 'Attention', y: 360, type: 'attn', layer: 1 },
-            { id: 'res1_1', label: '+', y: 385, type: 'residual', layer: 1 },
-            { id: 'ln2_1', label: 'LayerNorm 2', y: 395, type: 'norm', layer: 1 },
-            { id: 'ffn_1', label: 'FFN', y: 410, type: 'ffn', layer: 1 },
-            { id: 'res2_1', label: '+', y: 425, type: 'residual', layer: 1 },
-            { id: 'ln_f', label: 'Final LN', y: 440, type: 'norm' },
-            { id: 'out', label: 'Output', y: 455, type: 'output' },
+        const layers = [
+            { id: 'input', count: 5, x: 30, color: '#555', labels: ['dx', 'dy', 'px', 'py', 'd'] },
+            { id: 'h1', count: 8, x: 90, color: '#335' },
+            { id: 'h2', count: 8, x: 150, color: '#335' },
+            { id: 'output', count: 2, x: 210, color: '#4af', labels: ['→x', '→y'] },
         ];
 
-        // Draw edges
-        for (let i = 0; i < nodes.length - 1; i++) {
-            const edge = this.createEdge(svg, nodes[i], nodes[i + 1]);
-            this.graphEdges.push(edge);
+        // Draw edges (input→h1, h1→h2, h2→output)
+        for (let l = 0; l < layers.length - 1; l++) {
+            const from = layers[l];
+            const to = layers[l + 1];
+            for (let i = 0; i < from.count; i++) {
+                for (let j = 0; j < to.count; j++) {
+                    const y1 = this.nodeY(i, from.count);
+                    const y2 = this.nodeY(j, to.count);
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', from.x);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', to.x);
+                    line.setAttribute('y2', y2);
+                    line.setAttribute('stroke', '#1a1a1a');
+                    line.setAttribute('stroke-width', '0.5');
+                    line.classList.add('edge');
+                    line.dataset.layer = l;
+                    line.dataset.from = i;
+                    line.dataset.to = j;
+                    svg.appendChild(line);
+                    this.edges.push(line);
+                }
+            }
         }
 
-        // Draw residual skip connections
-        this.createSkipEdge(svg, nodes[0], nodes[3]); // emb → res1_0
-        this.createSkipEdge(svg, nodes[3], nodes[6]); // res1_0 → res2_0
-
         // Draw nodes
-        nodes.forEach(node => {
-            const group = this.createNode(svg, node);
-            this.graphNodes[node.id] = { element: group, data: node };
+        layers.forEach(layer => {
+            for (let i = 0; i < layer.count; i++) {
+                const y = this.nodeY(i, layer.count);
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', layer.x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', layer.id === 'input' || layer.id === 'output' ? 6 : 5);
+                circle.setAttribute('fill', '#111');
+                circle.setAttribute('stroke', layer.color);
+                circle.setAttribute('stroke-width', '1');
+                circle.classList.add('node');
+                circle.dataset.layer = layer.id;
+                circle.dataset.idx = i;
+                svg.appendChild(circle);
+                this.nodes[layer.id].push(circle);
+                this.nodeElements.push(circle);
+
+                if (layer.labels && layer.labels[i]) {
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', layer.id === 'input' ? layer.x - 12 : layer.x + 12);
+                    text.setAttribute('y', y + 3);
+                    text.setAttribute('text-anchor', layer.id === 'input' ? 'end' : 'start');
+                    text.setAttribute('font-size', '7');
+                    text.setAttribute('fill', '#333');
+                    text.setAttribute('font-family', 'Courier New');
+                    text.textContent = layer.labels[i];
+                    svg.appendChild(text);
+                }
+            }
+        });
+
+        // Layer labels
+        const labelY = 190;
+        [['Input', 30], ['Hidden 1', 90], ['Hidden 2', 150], ['Output', 210]].forEach(([name, x]) => {
+            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            t.setAttribute('x', x);
+            t.setAttribute('y', labelY);
+            t.setAttribute('text-anchor', 'middle');
+            t.setAttribute('font-size', '7');
+            t.setAttribute('fill', '#2a2a2a');
+            t.setAttribute('font-family', 'Courier New');
+            t.textContent = name;
+            svg.appendChild(t);
         });
 
         el.appendChild(svg);
         this.svg = svg;
     }
 
-    createNode(svg, node) {
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('data-id', node.id);
+    nodeY(idx, total) {
+        const margin = 20;
+        const range = 160;
+        if (total === 1) return 100;
+        return margin + (idx / (total - 1)) * range;
+    }
 
-        const w = node.type === 'residual' ? 24 : 120;
-        const h = node.type === 'residual' ? 24 : 28;
-        const x = 140 - w / 2;
-        const y = node.y;
+    updateGraph() {
+        if (!this.brain.initialized || !this.svg) return;
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', x);
-        rect.setAttribute('y', y);
-        rect.setAttribute('width', w);
-        rect.setAttribute('height', h);
-        rect.setAttribute('rx', node.type === 'residual' ? 12 : 4);
-        rect.setAttribute('fill', '#1a1a1a');
-        rect.setAttribute('stroke', '#333');
-        rect.setAttribute('stroke-width', '1');
-        rect.classList.add('graph-node');
+        const { h1, h2 } = this.brain.getActivations();
+        if (!h1 || !h2) return;
 
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', 140);
-        text.setAttribute('y', y + h / 2 + 4);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('font-size', node.type === 'residual' ? '10' : '9');
-        text.setAttribute('fill', '#666');
-        text.setAttribute('font-family', 'Courier New');
-        text.textContent = node.label;
-
-        g.appendChild(rect);
-        g.appendChild(text);
-        svg.appendChild(g);
-
-        // Click handler to select weight view
-        if (node.type === 'attn' || node.type === 'ffn') {
-            g.style.cursor = 'pointer';
-            g.addEventListener('click', () => {
-                this.activeLayer = node.layer || 0;
-                this.activeComponent = node.type === 'attn' ? 0 : 4;
-                this.drawWeights();
-            });
+        // Update hidden layer node colors based on activation
+        for (let i = 0; i < this.nodes.h1.length; i++) {
+            const val = Math.abs(h1[i * 4]); // Sample every 4th neuron (we show 8 of 32)
+            const intensity = Math.min(1, val * 2);
+            this.nodes.h1[i].setAttribute('fill', this.activationColor(intensity));
+            this.nodes.h1[i].setAttribute('stroke', this.activationStroke(intensity));
+        }
+        for (let i = 0; i < this.nodes.h2.length; i++) {
+            const val = Math.abs(h2[i * 4]);
+            const intensity = Math.min(1, val * 2);
+            this.nodes.h2[i].setAttribute('fill', this.activationColor(intensity));
+            this.nodes.h2[i].setAttribute('stroke', this.activationStroke(intensity));
         }
 
-        return g;
-    }
-
-    createEdge(svg, from, to) {
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        const fromH = from.type === 'residual' ? 24 : 28;
-        line.setAttribute('x1', 140);
-        line.setAttribute('y1', from.y + fromH);
-        line.setAttribute('x2', 140);
-        line.setAttribute('y2', to.y);
-        line.setAttribute('stroke', '#222');
-        line.setAttribute('stroke-width', '1');
-        line.classList.add('graph-edge');
-        svg.appendChild(line);
-        return line;
-    }
-
-    createSkipEdge(svg, from, to) {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const fromH = from.type === 'residual' ? 24 : 28;
-        const x = 210;
-        path.setAttribute('d', `M 200 ${from.y + fromH / 2} L ${x} ${from.y + fromH / 2} L ${x} ${to.y + 12} L 200 ${to.y + 12}`);
-        path.setAttribute('stroke', '#1a1a1a');
-        path.setAttribute('stroke-width', '1');
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-dasharray', '3,3');
-        svg.appendChild(path);
-    }
-
-    highlightNode(nodeId, color = '#4af', intensity = 1.0) {
-        const node = this.graphNodes[nodeId];
-        if (!node) return;
-        const rect = node.element.querySelector('rect');
-        rect.setAttribute('stroke', color);
-        rect.setAttribute('stroke-width', '2');
-        rect.setAttribute('fill', this.hexWithAlpha(color, intensity * 0.15));
-    }
-
-    resetNodeHighlights() {
-        Object.values(this.graphNodes).forEach(({ element }) => {
-            const rect = element.querySelector('rect');
-            rect.setAttribute('stroke', '#333');
-            rect.setAttribute('stroke-width', '1');
-            rect.setAttribute('fill', '#1a1a1a');
-        });
-        this.graphEdges.forEach(edge => {
-            edge.setAttribute('stroke', '#222');
-        });
-    }
-
-    animateInference(step, totalSteps) {
-        this.resetNodeHighlights();
-        const nodeOrder = ['emb', 'ln1_0', 'attn_0', 'res1_0', 'ln2_0', 'ffn_0', 'res2_0',
-                           'ln1_1', 'attn_1', 'res1_1', 'ln2_1', 'ffn_1', 'res2_1', 'ln_f', 'out'];
-
-        // Map generation step to a position in the graph (cycle through)
-        const pos = step % nodeOrder.length;
-        for (let i = 0; i <= pos; i++) {
-            const fade = 1.0 - (pos - i) * 0.15;
-            this.highlightNode(nodeOrder[i], '#4af', Math.max(0.1, fade));
-        }
-
-        // Highlight active edge
-        if (pos > 0 && pos < this.graphEdges.length) {
-            this.graphEdges[pos - 1].setAttribute('stroke', '#4af');
+        // Update output nodes
+        const outPtr = this.brain.wasm.get_output_ptr();
+        const out = new Float32Array(this.brain.memory.buffer, Number(outPtr), 2);
+        for (let i = 0; i < 2; i++) {
+            const val = Math.abs(out[i]);
+            this.nodes.output[i].setAttribute('fill', this.activationColor(val));
         }
     }
 
-    animateTraining(step) {
-        this.resetNodeHighlights();
-        const nodeOrder = ['out', 'ln_f', 'res2_1', 'ffn_1', 'ln2_1', 'res1_1', 'attn_1', 'ln1_1',
-                           'res2_0', 'ffn_0', 'ln2_0', 'res1_0', 'attn_0', 'ln1_0', 'emb'];
-
-        const pos = step % nodeOrder.length;
-        for (let i = 0; i <= pos; i++) {
-            const fade = 1.0 - (pos - i) * 0.15;
-            this.highlightNode(nodeOrder[i], '#f84', Math.max(0.1, fade));
-        }
+    activationColor(intensity) {
+        const r = Math.round(17 + intensity * 50);
+        const g = Math.round(17 + intensity * 100);
+        const b = Math.round(34 + intensity * 180);
+        return `rgb(${r},${g},${b})`;
     }
 
-    // === CANVAS PANELS ===
-
-    initCanvases() {
-        this.canvases = {
-            attention: this.containers.attention,
-            weights: this.containers.weights,
-            loss: this.containers.loss,
-            probs: this.containers.probs,
-        };
+    activationStroke(intensity) {
+        const r = Math.round(51 + intensity * 50);
+        const g = Math.round(51 + intensity * 120);
+        const b = Math.round(85 + intensity * 170);
+        return `rgb(${r},${g},${b})`;
     }
 
-    getCtx(name) {
-        const canvas = this.canvases[name];
-        if (!canvas) return null;
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
-        return { ctx, w: rect.width, h: rect.height };
-    }
-
-    // --- Attention Heatmap ---
-
-    drawAttention(layer = 0, head = 0) {
-        const r = this.getCtx('attention');
-        if (!r) return;
-        const { ctx, w, h } = r;
-
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, w, h);
-
-        const seqLen = this.engine.getSeqLen();
-        if (seqLen < 2) {
-            ctx.fillStyle = '#333';
-            ctx.font = '11px Courier New';
-            ctx.fillText('No attention data yet', 10, h / 2);
-            return;
-        }
-
-        const attn = this.engine.getAttention(layer, head);
-        const cellW = w / seqLen;
-        const cellH = h / seqLen;
-
-        for (let q = 0; q < seqLen; q++) {
-            for (let k = 0; k < seqLen; k++) {
-                const val = attn[q * 128 + k];
-                const color = this.infernoColor(val);
-                ctx.fillStyle = color;
-                ctx.fillRect(k * cellW, q * cellH, cellW + 0.5, cellH + 0.5);
-            }
-        }
-
-        // Axis labels
-        ctx.fillStyle = '#444';
-        ctx.font = '9px Courier New';
-        ctx.fillText('keys →', w - 45, h - 4);
-        ctx.save();
-        ctx.translate(8, h - 10);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText('queries →', 0, 0);
-        ctx.restore();
-    }
-
-    // --- Weight Matrix Heatmap ---
+    // === WEIGHT HEATMAP ===
 
     drawWeights() {
-        const r = this.getCtx('weights');
-        if (!r) return;
-        const { ctx, w, h } = r;
+        const canvas = this.containers.weights;
+        if (!canvas) return;
+        const { ctx, w, h } = this.getCtx(canvas);
 
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, w, h);
 
-        if (!this.engine.initialized) return;
+        if (!this.brain.initialized) return;
 
-        const weights = this.engine.getWeightsForLayer(this.activeLayer, this.activeComponent);
-        const size = weights.length;
+        const weights = this.brain.getWeights();
+        if (!weights) return;
 
-        // Determine matrix dimensions for display
-        const cols = this.activeComponent >= 4 ? 256 : 64;
-        const rows = Math.floor(size / cols);
-
+        // Show first layer weights: 5 inputs × 32 hidden
+        const rows = 5;
+        const cols = 32;
         const cellW = w / cols;
-        const cellH = h / rows;
+        const cellH = (h - 14) / rows;
 
-        // Find scale
         let maxAbs = 0;
-        for (let i = 0; i < size; i++) {
+        for (let i = 0; i < rows * cols; i++) {
             const abs = Math.abs(weights[i]);
             if (abs > maxAbs) maxAbs = abs;
         }
@@ -297,83 +196,67 @@ export class Visualization {
         }
 
         // Label
-        const names = ['Q', 'K', 'V', 'Out', 'FFN Up', 'FFN Down'];
-        ctx.fillStyle = '#555';
-        ctx.font = '9px Courier New';
-        ctx.fillText(`Layer ${this.activeLayer} · ${names[this.activeComponent]} [${rows}×${cols}]`, 4, h - 4);
-    }
+        ctx.fillStyle = '#333';
+        ctx.font = '8px Courier New';
+        ctx.textAlign = 'left';
+        ctx.fillText('W1 [5×32] input→hidden', 3, h - 3);
 
-    drawWeightDeltas() {
-        const r = this.getCtx('weights');
-        if (!r) return;
-        const { ctx, w, h } = r;
-
-        // Draw base weights first
-        this.drawWeights();
-
-        // Overlay deltas
-        const deltas = this.engine.getWeightDeltas();
-        if (!deltas || deltas.length === 0) return;
-
-        // Find the offset for current component in the flat deltas array
-        // For simplicity, just show the overall delta magnitude as a border effect
-        let totalDelta = 0;
-        for (let i = 0; i < Math.min(deltas.length, 1000); i++) {
-            totalDelta += Math.abs(deltas[i]);
-        }
-        const avgDelta = totalDelta / Math.min(deltas.length, 1000);
-
-        if (avgDelta > 0.0001) {
-            ctx.strokeStyle = `rgba(34, 204, 102, ${Math.min(1, avgDelta * 100)})`;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(1, 1, w - 2, h - 2);
-
-            ctx.fillStyle = '#2c6';
-            ctx.font = '9px Courier New';
-            ctx.fillText(`Δ ${avgDelta.toExponential(2)}`, w - 80, 12);
+        // Show weight delta indicator
+        const deltas = this.brain.getWeightDeltas();
+        if (deltas) {
+            let totalDelta = 0;
+            for (let i = 0; i < Math.min(deltas.length, 160); i++) {
+                totalDelta += Math.abs(deltas[i]);
+            }
+            const avgDelta = totalDelta / 160;
+            if (avgDelta > 0.0001) {
+                ctx.strokeStyle = `rgba(34, 204, 102, ${Math.min(1, avgDelta * 50)})`;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(1, 1, w - 2, h - 16);
+            }
         }
     }
 
-    // --- Loss Curve ---
+    // === LOSS CURVE ===
 
     drawLoss() {
-        const r = this.getCtx('loss');
-        if (!r) return;
-        const { ctx, w, h } = r;
+        const canvas = this.containers.loss;
+        if (!canvas) return;
+        const { ctx, w, h } = this.getCtx(canvas);
 
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, w, h);
 
         if (this.lossHistory.length < 2) {
-            ctx.fillStyle = '#333';
-            ctx.font = '11px Courier New';
-            ctx.fillText('Train the model to see loss curve', 10, h / 2);
+            ctx.fillStyle = '#222';
+            ctx.font = '9px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('catch the dot to see loss', w / 2, h / 2);
             return;
         }
 
-        const padding = { top: 15, bottom: 20, left: 35, right: 10 };
+        const padding = { top: 12, bottom: 16, left: 30, right: 8 };
         const plotW = w - padding.left - padding.right;
         const plotH = h - padding.top - padding.bottom;
 
-        // Show last 100 points max
-        const data = this.lossHistory.slice(-100);
+        const data = this.lossHistory.slice(-60);
         const maxLoss = Math.max(...data) * 1.1;
         const minLoss = Math.min(...data) * 0.9;
         const range = maxLoss - minLoss || 1;
 
-        // Grid lines
-        ctx.strokeStyle = '#1a1a1a';
+        // Grid
+        ctx.strokeStyle = '#151515';
         ctx.lineWidth = 0.5;
-        for (let i = 0; i <= 4; i++) {
-            const y = padding.top + (i / 4) * plotH;
+        for (let i = 0; i <= 3; i++) {
+            const y = padding.top + (i / 3) * plotH;
             ctx.beginPath();
             ctx.moveTo(padding.left, y);
             ctx.lineTo(w - padding.right, y);
             ctx.stroke();
 
-            const val = maxLoss - (i / 4) * range;
-            ctx.fillStyle = '#444';
-            ctx.font = '8px Courier New';
+            const val = maxLoss - (i / 3) * range;
+            ctx.fillStyle = '#333';
+            ctx.font = '7px Courier New';
             ctx.textAlign = 'right';
             ctx.fillText(val.toFixed(2), padding.left - 3, y + 3);
         }
@@ -393,142 +276,198 @@ export class Visualization {
         // Current value
         const current = data[data.length - 1];
         ctx.fillStyle = '#4af';
-        ctx.font = '10px Courier New';
+        ctx.font = '8px Courier New';
         ctx.textAlign = 'left';
-        ctx.fillText(`loss: ${current.toFixed(4)}`, padding.left + 5, padding.top - 3);
+        ctx.fillText(`loss: ${current.toFixed(4)}`, padding.left + 2, padding.top - 3);
 
         // Step count
-        ctx.fillStyle = '#444';
+        ctx.fillStyle = '#333';
         ctx.textAlign = 'right';
-        ctx.fillText(`step ${this.lossHistory.length}`, w - padding.right, h - 4);
+        ctx.fillText(`step ${this.lossHistory.length}`, w - padding.right, h - 3);
     }
 
-    // --- Token Probabilities ---
+    // === ACTIVATION BARS ===
 
-    drawProbs(probs) {
-        const r = this.getCtx('probs');
-        if (!r) return;
-        const { ctx, w, h } = r;
+    drawActivations() {
+        const canvas = this.containers.activations;
+        if (!canvas) return;
+        const { ctx, w, h } = this.getCtx(canvas);
 
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, w, h);
 
-        if (!probs || probs.length === 0) {
-            ctx.fillStyle = '#333';
-            ctx.font = '11px Courier New';
-            ctx.fillText('Generate text to see probabilities', 10, h / 2);
-            return;
+        if (!this.brain.initialized) return;
+
+        const { h1, h2 } = this.brain.getActivations();
+        if (!h1 || !h2) return;
+
+        const barW = 3;
+        const gap = 1;
+        const sectionGap = 8;
+        const totalBars = 32 + 32;
+        const totalWidth = totalBars * (barW + gap) + sectionGap;
+        const startX = (w - totalWidth) / 2;
+        const barMaxH = h - 20;
+
+        // Label
+        ctx.fillStyle = '#333';
+        ctx.font = '7px Courier New';
+        ctx.textAlign = 'center';
+
+        // Hidden layer 1
+        const h1X = startX;
+        ctx.fillText('H1', h1X + 16 * (barW + gap) / 2, h - 3);
+        for (let i = 0; i < 32; i++) {
+            const val = h1[i];
+            const absVal = Math.min(1, Math.abs(val) * 1.5);
+            const barH = absVal * barMaxH;
+            const x = h1X + i * (barW + gap);
+            const y = (h - 12) / 2;
+
+            if (val >= 0) {
+                ctx.fillStyle = this.posBarColor(absVal);
+                ctx.fillRect(x, y - barH, barW, barH);
+            } else {
+                ctx.fillStyle = this.negBarColor(absVal);
+                ctx.fillRect(x, y, barW, barH);
+            }
         }
 
-        const indexed = Array.from(probs).map((p, i) => ({ prob: p, idx: i }));
-        indexed.sort((a, b) => b.prob - a.prob);
-        const top = indexed.slice(0, 12);
+        // Hidden layer 2
+        const h2X = h1X + 32 * (barW + gap) + sectionGap;
+        ctx.fillStyle = '#333';
+        ctx.fillText('H2', h2X + 16 * (barW + gap) / 2, h - 3);
+        for (let i = 0; i < 32; i++) {
+            const val = h2[i];
+            const absVal = Math.min(1, Math.abs(val) * 1.5);
+            const barH = absVal * barMaxH;
+            const x = h2X + i * (barW + gap);
+            const y = (h - 12) / 2;
 
-        const barH = (h - 10) / 12;
-        const labelW = 25;
-        const barMaxW = w - labelW - 50;
+            if (val >= 0) {
+                ctx.fillStyle = this.posBarColor(absVal);
+                ctx.fillRect(x, y - barH, barW, barH);
+            } else {
+                ctx.fillStyle = this.negBarColor(absVal);
+                ctx.fillRect(x, y, barW, barH);
+            }
+        }
+    }
 
-        top.forEach(({ prob, idx }, i) => {
-            const y = 5 + i * barH;
-            const ch = this.engine.tokenizer.itos[idx] || '?';
-            const display = ch === '\n' ? '\\n' : ch === ' ' ? '␣' : ch;
+    // === STATS PANEL ===
 
-            // Label
-            ctx.fillStyle = '#777';
-            ctx.font = `${Math.min(barH * 0.65, 11)}px Courier New`;
+    drawStats(game) {
+        const canvas = this.containers.stats;
+        if (!canvas) return;
+        const { ctx, w, h } = this.getCtx(canvas);
+
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, w, h);
+
+        const stats = game.getStats();
+        const trainStep = this.brain.getTrainingStep();
+
+        ctx.font = '9px Courier New';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        const lines = [
+            { label: 'catches', value: `${stats.score}`, color: '#fff' },
+            { label: 'avg survival', value: `${stats.avgSurvival} frames`, color: '#888' },
+            { label: 'best streak', value: `${stats.bestStreak} frames`, color: '#888' },
+            { label: 'train steps', value: `${trainStep}`, color: '#4af' },
+            { label: 'last loss', value: this.brain.getLastLoss().toFixed(4), color: '#4af' },
+        ];
+
+        const lineH = 14;
+        lines.forEach(({ label, value, color }, i) => {
+            const y = 6 + i * lineH;
+            ctx.fillStyle = '#444';
+            ctx.fillText(label, 6, y);
+            ctx.fillStyle = color;
             ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(display, labelW - 3, y + barH / 2);
-
-            // Bar background
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(labelW, y + 2, barMaxW, barH - 4);
-
-            // Bar fill
-            const barW = prob * barMaxW;
-            const gradient = ctx.createLinearGradient(labelW, 0, labelW + barW, 0);
-            gradient.addColorStop(0, '#2255aa');
-            gradient.addColorStop(1, '#4af');
-            ctx.fillStyle = gradient;
-            ctx.globalAlpha = 0.8;
-            ctx.fillRect(labelW, y + 2, barW, barH - 4);
-            ctx.globalAlpha = 1;
-
-            // Percentage
-            ctx.fillStyle = '#555';
+            ctx.fillText(value, w - 6, y);
             ctx.textAlign = 'left';
-            ctx.font = `${Math.min(barH * 0.55, 9)}px Courier New`;
-            ctx.fillText(`${(prob * 100).toFixed(1)}%`, labelW + barW + 4, y + barH / 2);
         });
+
+        // Survival trend (mini sparkline)
+        if (this.survivalHistory.length > 2) {
+            const sparkY = 6 + lines.length * lineH + 4;
+            const sparkH = h - sparkY - 4;
+            const sparkW = w - 12;
+            const data = this.survivalHistory.slice(-30);
+            const max = Math.max(...data, 1);
+
+            ctx.strokeStyle = '#2a5';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            data.forEach((v, i) => {
+                const x = 6 + (i / (data.length - 1)) * sparkW;
+                const y = sparkY + sparkH - (v / max) * sparkH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            ctx.fillStyle = '#222';
+            ctx.font = '7px Courier New';
+            ctx.textAlign = 'left';
+            ctx.fillText('survival trend ↑', 6, sparkY - 2);
+        }
     }
 
     // === COLOR UTILITIES ===
 
-    infernoColor(t) {
-        // Simplified inferno colormap (dark purple → red → yellow)
-        t = Math.max(0, Math.min(1, t));
-        const r = Math.round(Math.min(255, t * 3 * 255 * 0.8 + t * t * 200));
-        const g = Math.round(Math.max(0, (t - 0.4) * 2 * 255));
-        const b = Math.round(Math.max(0, 140 - t * 300));
-        return `rgb(${r},${g},${b})`;
-    }
-
     divergingColor(val) {
-        // Blue (negative) → dark (zero) → red (positive)
         val = Math.max(-1, Math.min(1, val));
         if (val < 0) {
             const t = -val;
-            return `rgb(${Math.round(17 + t * 17)},${Math.round(17 + t * 51)},${Math.round(17 + t * 153)})`;
+            return `rgb(${Math.round(17 + t * 20)},${Math.round(17 + t * 60)},${Math.round(34 + t * 170)})`;
         } else {
             const t = val;
-            return `rgb(${Math.round(17 + t * 153)},${Math.round(17 + t * 34)},${Math.round(17 + t * 17)})`;
+            return `rgb(${Math.round(34 + t * 170)},${Math.round(17 + t * 40)},${Math.round(17 + t * 20)})`;
         }
     }
 
-    hexWithAlpha(hex, alpha) {
-        // Convert hex color + alpha to rgba
-        const r = parseInt(hex.slice(1, 3), 16) || parseInt(hex.slice(1, 2), 16) * 17 || 68;
-        const g = parseInt(hex.slice(3, 5), 16) || parseInt(hex.slice(2, 3), 16) * 17 || 170;
-        const b = parseInt(hex.slice(5, 7), 16) || parseInt(hex.slice(3, 4), 16) * 17 || 255;
-        return `rgba(${r},${g},${b},${alpha})`;
+    posBarColor(t) {
+        return `rgb(${Math.round(20 + t * 40)},${Math.round(40 + t * 140)},${Math.round(60 + t * 195)})`;
+    }
+
+    negBarColor(t) {
+        return `rgb(${Math.round(40 + t * 180)},${Math.round(20 + t * 40)},${Math.round(20 + t * 30)})`;
+    }
+
+    // === HELPERS ===
+
+    getCtx(canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w: rect.width, h: rect.height };
     }
 
     // === PUBLIC API ===
 
-    onInferenceToken(step) {
-        this.inferenceStep = step;
-        this.animateInference(step, 0);
-        this.drawAttention(0, 0);
-        this.drawProbs(this.engine.getProbs());
-    }
-
-    onTrainingStep(step, loss) {
+    onCatch(loss, framesSurvived) {
         this.lossHistory.push(loss);
-        this.trainingStep = step;
-        this.animateTraining(step);
+        this.survivalHistory.push(framesSurvived);
+        this.catchTimes.push(Date.now());
         this.drawLoss();
-        this.drawWeightDeltas();
+        this.drawWeights();
     }
 
-    onIdle() {
-        this.resetNodeHighlights();
-        this.state = 'idle';
+    onFrame(game) {
+        this.updateGraph();
+        this.drawActivations();
     }
 
-    addLoss(loss) {
-        this.lossHistory.push(loss);
-    }
-
-    redrawAll() {
-        this.drawAttention(0, 0);
+    redrawAll(game) {
         this.drawWeights();
         this.drawLoss();
-        this.drawProbs(this.engine.initialized ? this.engine.getProbs() : null);
-    }
-
-    selectComponent(layer, component) {
-        this.activeLayer = layer;
-        this.activeComponent = component;
-        this.drawWeights();
+        this.drawActivations();
+        if (game) this.drawStats(game);
     }
 }

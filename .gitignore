@@ -2,15 +2,8 @@
 .zig-cache/
 zig-out/
 *.wasm.o
-
-# Python
-.venv/
-__pycache__/
-*.pyc
-
-# Build artifacts
-main
-main.o
+zig-mlp/main.wasm
+zig-mlp/main
 
 # OS
 .DS_Store
@@ -26,4 +19,8 @@ node_modules/
 .claude
 
 # Venv
-.venv
+.venv/
+__pycache__/
+
+# Telemetry dumps
+ctd-telemetry-*.json

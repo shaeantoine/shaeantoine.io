@@ -4,24 +4,22 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== Building DIO ==="
+echo "=== Building Catch the Dot ==="
 
-# Step 1: Compile Zig to WASM
-echo "Compiling Zig transformer to WASM..."
-cd "$ROOT_DIR/zig-transformer"
+echo "Compiling MLP to WASM..."
+cd "$ROOT_DIR/zig-mlp"
 zig build-exe src/main.zig -target wasm32-freestanding -fno-entry -rdynamic -OReleaseSmall
 cp main.wasm "$ROOT_DIR/model.wasm"
 echo "  → model.wasm ($(wc -c < "$ROOT_DIR/model.wasm" | tr -d ' ') bytes)"
 
-# Step 2: Train model (only if base.bin doesn't exist)
-if [ ! -f "$ROOT_DIR/weights/base.bin" ]; then
-    echo "Training model (this takes a few minutes)..."
-    cd "$ROOT_DIR/train"
-    python train.py
-else
-    echo "Skipping training (weights/base.bin already exists)"
-fi
-
 echo ""
 echo "=== Build complete ==="
-echo "Serve with: python -m http.server 8000"
+echo "Files:"
+echo "  index.html     $(wc -c < "$ROOT_DIR/index.html" | tr -d ' ') bytes"
+echo "  model.wasm     $(wc -c < "$ROOT_DIR/model.wasm" | tr -d ' ') bytes"
+echo "  js/game.js     $(wc -c < "$ROOT_DIR/js/game.js" | tr -d ' ') bytes"
+echo "  js/brain.js    $(wc -c < "$ROOT_DIR/js/brain.js" | tr -d ' ') bytes"
+echo "  js/viz.js      $(wc -c < "$ROOT_DIR/js/viz.js" | tr -d ' ') bytes"
+echo "  js/persist.js  $(wc -c < "$ROOT_DIR/js/persistence.js" | tr -d ' ') bytes"
+echo ""
+echo "Serve with: python3 -m http.server 8000"

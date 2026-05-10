@@ -1,6 +1,6 @@
-// Persistence: IndexedDB for model weights, localStorage for chat history
+// Persistence: IndexedDB for model weights, localStorage for game stats
 
-const DB_NAME = 'dio-model';
+const DB_NAME = 'catch-the-dot';
 const DB_VERSION = 1;
 
 export class Persistence {
@@ -14,11 +14,8 @@ export class Persistence {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                if (!db.objectStoreNames.contains('checkpoints')) {
-                    db.createObjectStore('checkpoints', { keyPath: 'id' });
-                }
-                if (!db.objectStoreNames.contains('base')) {
-                    db.createObjectStore('base', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('brain')) {
+                    db.createObjectStore('brain', { keyPath: 'id' });
                 }
             };
 
@@ -31,32 +28,31 @@ export class Persistence {
         });
     }
 
-    async saveCheckpoint(weightsBuffer, optimizerBuffer, metadata = {}) {
+    async saveWeights(weightsBuffer, metadata = {}) {
         if (!this.db) return;
 
-        const tx = this.db.transaction('checkpoints', 'readwrite');
-        const store = tx.objectStore('checkpoints');
+        const tx = this.db.transaction('brain', 'readwrite');
+        const store = tx.objectStore('brain');
 
         await new Promise((resolve, reject) => {
             const request = store.put({
                 id: 'current',
                 weights: weightsBuffer,
-                optimizer: optimizerBuffer,
-                version: 1,
-                timestamp: new Date(),
-                totalSteps: metadata.totalSteps || 0,
-                corrections: metadata.corrections || 0
+                timestamp: Date.now(),
+                catches: metadata.catches || 0,
+                trainSteps: metadata.trainSteps || 0,
+                bestStreak: metadata.bestStreak || 0
             });
             request.onsuccess = resolve;
             request.onerror = () => reject(request.error);
         });
     }
 
-    async loadCheckpoint() {
+    async loadWeights() {
         if (!this.db) return null;
 
-        const tx = this.db.transaction('checkpoints', 'readonly');
-        const store = tx.objectStore('checkpoints');
+        const tx = this.db.transaction('brain', 'readonly');
+        const store = tx.objectStore('brain');
 
         return new Promise((resolve, reject) => {
             const request = store.get('current');
@@ -65,40 +61,11 @@ export class Persistence {
         });
     }
 
-    async saveBaseWeights(weightsBuffer) {
+    async deleteWeights() {
         if (!this.db) return;
 
-        const tx = this.db.transaction('base', 'readwrite');
-        const store = tx.objectStore('base');
-
-        await new Promise((resolve, reject) => {
-            const request = store.put({
-                id: 'shakespeare',
-                weights: weightsBuffer
-            });
-            request.onsuccess = resolve;
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    async loadBaseWeights() {
-        if (!this.db) return null;
-
-        const tx = this.db.transaction('base', 'readonly');
-        const store = tx.objectStore('base');
-
-        return new Promise((resolve, reject) => {
-            const request = store.get('shakespeare');
-            request.onsuccess = () => resolve(request.result?.weights || null);
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    async deleteCheckpoint() {
-        if (!this.db) return;
-
-        const tx = this.db.transaction('checkpoints', 'readwrite');
-        const store = tx.objectStore('checkpoints');
+        const tx = this.db.transaction('brain', 'readwrite');
+        const store = tx.objectStore('brain');
 
         await new Promise((resolve, reject) => {
             const request = store.delete('current');
@@ -107,42 +74,25 @@ export class Persistence {
         });
     }
 
-    // Chat history via localStorage
-    saveChatHistory(messages) {
-        const trimmed = messages.slice(-200);
+    saveStats(stats) {
         try {
-            localStorage.setItem('dio-chat', JSON.stringify(trimmed));
+            localStorage.setItem('ctd-stats', JSON.stringify(stats));
         } catch {
-            // Quota exceeded — trim more aggressively
-            localStorage.setItem('dio-chat', JSON.stringify(trimmed.slice(-50)));
+            // ignore
         }
     }
 
-    loadChatHistory() {
+    loadStats() {
         try {
-            const data = localStorage.getItem('dio-chat');
-            return data ? JSON.parse(data) : [];
+            const data = localStorage.getItem('ctd-stats');
+            return data ? JSON.parse(data) : null;
         } catch {
-            return [];
+            return null;
         }
     }
 
-    saveSessionMeta(meta) {
-        localStorage.setItem('dio-meta', JSON.stringify(meta));
-    }
-
-    loadSessionMeta() {
-        try {
-            const data = localStorage.getItem('dio-meta');
-            return data ? JSON.parse(data) : { totalSteps: 0, corrections: 0 };
-        } catch {
-            return { totalSteps: 0, corrections: 0 };
-        }
-    }
-
-    clearAll() {
-        localStorage.removeItem('dio-chat');
-        localStorage.removeItem('dio-meta');
-        return this.deleteCheckpoint();
+    async clearAll() {
+        localStorage.removeItem('ctd-stats');
+        return this.deleteWeights();
     }
 }
