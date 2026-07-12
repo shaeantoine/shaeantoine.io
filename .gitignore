@@ -1,6 +1,22 @@
 # Cache
 .zig-cache
 
+# world/ sub-project — dependencies only; built output (world/) is committed
+world-src/node_modules
+world-src/tools/node_modules
+
+# offline country pipeline — raw sources and intermediate .obj are not
+# committed; only the final hand-tweaked .glb (world-src/assets/models/)
+world-src/tools/input/*.geojson
+world-src/tools/input/*_object_pack*/
+world-src/tools/output/
+
+# temporary live-preview .obj assets (see loaders/obj.js) — undecimated
+# country meshes for in-browser iteration only, never a committed asset,
+# in source or in the built output that normally IS committed
+world-src/assets/models/preview/
+world/models/preview/
+
 # Build files
 main
 main.o
