@@ -3,23 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shae McKenna</title>
-    <link rel="stylesheet" href="./static/css/style.css">
+    <title>World — Shae McKenna</title>
+  <script type="module" crossorigin src="/assets/index-CF4I2HBL.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-YP9Ov6Kv.css">
 </head>
 <body>
-    <main>
-        <h1>Shae McKenna</h1>
+    <canvas id="world-canvas"></canvas>
 
-        <div class="landing-prose">
-            <p>I build software and think about the structures underneath it. Most of my time is spent somewhere between machine learning and systems work — the places where abstractions get thin and you have to decide what you actually mean.</p>
+    <div id="landing" class="landing">
+        <canvas class="landing-life"></canvas>
+        <img class="landing-photo" src="images/shae-profile.jpg" alt="Shae McKenna">
+        <header class="landing-masthead">
+            <div class="landing-masthead-id">
+                <div class="landing-name">Shae McKenna</div>
+                <div class="landing-role">Currently designing software at Apple</div>
+            </div>
+            <nav class="landing-links">
+                <a href="/essays/">essays</a>
+                <a href="/projects/">projects</a>
+                <a href="/contact.html">contact</a>
+            </nav>
+        </header>
+        <footer class="landing-footer">
+            <p class="landing-footer-text">Want to learn more about me? Explore <button class="landing-explore" type="button">here</button>.</p>
+        </footer>
+    </div>
 
-            <p>Occasionally the thinking becomes <a href="/essays/">writing</a>. Not always long, not always finished, but honest about what I don't yet understand. The things I've built are <a href="/projects/">here</a> — some run in your browser, others only make sense described.</p>
+    <button id="world-return" class="world-return" type="button">return</button>
 
-            <p>There's a version of me that fits on <a href="/about.html">a single page</a>, and a more tedious one that fits on <a href="/cv.html">a CV</a>. I keep a <a href="/reading.html">list of what I've been reading</a>, mostly so I can retrace how my thinking changed.</p>
+    <div id="sidebar" class="sidebar" hidden></div>
 
-            <p>If you'd like to talk, you can <a href="/contact.html">find me</a>.</p>
-        </div>
-    </main>
+    <button id="mode-toggle" class="mode-toggle" type="button">enter shae's world</button>
 
     <div id="paradox"></div>
     <script src="./static/js/paradox.js"></script>
