@@ -1,0 +1,13 @@
+export const STATES = {
+    IDLE_LOADING: 'IDLE_LOADING',
+    ORBITING: 'ORBITING',
+    FLYING_TO_FOCUS: 'FLYING_TO_FOCUS',
+    FOCUSED: 'FOCUSED',
+    RETURNING: 'RETURNING',
+    MODE_TRANSITIONING: 'MODE_TRANSITIONING'
+};
+
+export const MODES = {
+    GEOGRAPHY: 'geography',
+    SHAES_WORLD: 'shaesWorld'
+};

@@ -1,0 +1,18 @@
+{
+  "name": "world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive 3D diorama world for shaeantoine.io — build-time only, output committed to world/dist",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

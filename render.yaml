@@ -2,5 +2,5 @@ services:
   - type: web
     name: shaeantoine.io
     env: static
-    buildCommand: echo "No build required"
-    staticPublishPath: ./
+    buildCommand: bash scripts/build.sh
+    staticPublishPath: .build/site
