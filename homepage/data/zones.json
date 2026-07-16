@@ -20,7 +20,7 @@
           "label": "New Zealand",
           "palette": { "terrain": "#4f8f52", "accent": "#d9c873" },
           "shape": { "model": "models/geo/nz/nz.obj", "palette": "models/geo/nz/nz_palette.png", "scale": 1.5, "rotationY": 30 },
-          "landmark": { "model": "models/landmarks/rangitoto.glb", "position": [0, 0, 0] },
+          "landmark": null,
           "props": [],
           "sidebar": {
             "title": "New Zealand",
@@ -65,7 +65,7 @@
           "label": "UAE",
           "palette": { "terrain": "#e0c583", "accent": "#f2e6c2" },
           "shape": { "model": "models/geo/uae/uae.obj", "palette": "models/geo/uae/uae_palette.png", "scale": 1.5, "rotationY": 2 },
-          "landmark": { "model": "models/landmarks/emirates-palace.glb", "position": [0, 0, 0.6] },
+          "landmark": null,
           "props": [],
           "sidebar": {
             "title": "UAE",
@@ -106,7 +106,7 @@
           "label": "India",
           "palette": { "terrain": "#c97a4a", "accent": "#e8b979" },
           "shape": { "model": "models/geo/india/india.obj", "palette": "models/geo/india/india_palette.png", "scale": 1.5, "rotationY": 2 },
-          "landmark": { "model": "models/landmarks/gateway-of-india.glb", "position": [0, 0, 0.5] },
+          "landmark": null,
           "props": [],
           "sidebar": {
             "title": "India",
@@ -146,7 +146,7 @@
           "label": "Australia",
           "palette": { "terrain": "#b06a3a", "accent": "#e8a868" },
           "shape": { "model": "models/geo/australia/australia.obj", "palette": "models/geo/australia/australia_palette.png", "scale": 1.5, "rotationY": 5 },
-          "landmark": { "model": "models/landmarks/harbour-bridge.glb", "position": [0, 0, 0.6] },
+          "landmark": null,
           "props": [],
           "sidebar": {
             "title": "Australia",

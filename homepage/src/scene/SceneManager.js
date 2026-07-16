@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // Matches SkyDome's horizonColor exactly — a mismatched fog color creates a
 // visible seam where the globe silhouette meets the sky.
-const HORIZON_COLOR = 0xe8f7d8;
+const HORIZON_COLOR = 0xf5f3ff;
 
 /**
  * Owns the renderer, scene, lighting, and resize handling. Deliberately

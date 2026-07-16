@@ -15,8 +15,12 @@ export class Sidebar {
             <div class="sidebar-content"></div>
         `;
         this.contentEl = this.root.querySelector('.sidebar-content');
+        this.isOpen = false;
         this.root.querySelector('.sidebar-close').addEventListener('click', () => {
             emit('ui:sidebarClosed', {});
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.isOpen) emit('ui:sidebarClosed', {});
         });
 
         on('state:changed', ({ state, mode, selectedSlotId }) => {
@@ -49,11 +53,13 @@ export class Sidebar {
     }
 
     _open() {
+        this.isOpen = true;
         this.root.hidden = false;
         requestAnimationFrame(() => this.root.classList.add('open'));
     }
 
     _close() {
+        this.isOpen = false;
         this.root.classList.remove('open');
     }
 }

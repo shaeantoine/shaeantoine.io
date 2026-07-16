@@ -37,7 +37,11 @@ const inputController = new InputController(
 // consistent with the plan's one-directional event flow: InputController/
 // ModeToggle emit intents, the state machine interprets them, everything
 // else reacts to the resulting state.
+let currentState = STATES.IDLE_LOADING;
 on('state:changed', ({ state, mode, selectedSlotId }) => {
+    currentState = state;
+    if (state !== STATES.ORBITING) zoneLoader.setHovered(null);
+
     if (state === STATES.FLYING_TO_FOCUS) {
         cameraRig.flyToSlot(getSlot(selectedSlotId));
     } else if (state === STATES.RETURNING) {
@@ -51,6 +55,14 @@ on('state:changed', ({ state, mode, selectedSlotId }) => {
             emit('zones:transitionComplete', {});
         });
     }
+});
+
+// Purely a visual affordance (not a state transition), so it's handled here
+// directly instead of routed through WorldStateMachine.
+on('input:hover', ({ slotId }) => {
+    if (currentState !== STATES.ORBITING) return;
+    zoneLoader.setHovered(slotId);
+    canvas.style.cursor = slotId ? 'pointer' : '';
 });
 
 let lastTime = performance.now();

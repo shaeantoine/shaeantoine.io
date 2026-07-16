@@ -22,11 +22,24 @@ export class ZoneLoader {
         this.islandScale = islandScale;
         /** @type {Map<string, THREE.Group>} slotId -> currently-mounted group */
         this.mounted = new Map();
+        /** @type {Map<string, THREE.Mesh>} slotId -> that island's hover ring */
+        this.rings = new Map();
+        this.hoveredSlotId = null;
     }
 
     /** @returns the currently mounted THREE.Object3D per slot (for raycasting). */
     getPickableObjects() {
         return Array.from(this.mounted.values());
+    }
+
+    /** Shows the hover ring for `slotId` (or hides all rings if null). */
+    setHovered(slotId) {
+        if (slotId === this.hoveredSlotId) return;
+        const prevRing = this.rings.get(this.hoveredSlotId);
+        if (prevRing) prevRing.visible = false;
+        this.hoveredSlotId = slotId;
+        const nextRing = this.rings.get(slotId);
+        if (nextRing) nextRing.visible = true;
     }
 
     /** Builds every slot's skin for `mode` with no transition — used on initial load. */
@@ -43,6 +56,8 @@ export class ZoneLoader {
                     await dissolveOut(outgoing);
                     this.scene.remove(outgoing);
                     this.mounted.delete(slot.id);
+                    this.rings.delete(slot.id);
+                    if (this.hoveredSlotId === slot.id) this.hoveredSlotId = null;
                 }
                 const incoming = await this._mount(slot, mode);
                 await resolveIn(incoming);
@@ -70,6 +85,10 @@ export class ZoneLoader {
         const base = await this._buildShape(skin);
         if (base) content.add(base);
 
+        const ring = this._buildHighlightRing(base, skin.palette?.accent);
+        content.add(ring);
+        this.rings.set(slot.id, ring);
+
         const landmark = await this._buildLandmark(skin);
         if (landmark) content.add(landmark);
 
@@ -80,6 +99,33 @@ export class ZoneLoader {
         this.scene.add(group);
         this.mounted.set(slot.id, group);
         return group;
+    }
+
+    // Ground-flush ring, sized to the just-built shape's own footprint (measured
+    // before it's parented, so the box reflects only its own scale/rotation —
+    // not islandScale or the globe placement transform). Kept invisible until
+    // hovered rather than built on demand, since sizing depends on `base`'s
+    // geometry, which only exists right here in `_mount`.
+    _buildHighlightRing(base, accentColor) {
+        const box = new THREE.Box3();
+        if (base) box.setFromObject(base);
+        const footprint = box.isEmpty() ? new THREE.Vector3(3.2, 1, 3.2) : box.getSize(new THREE.Vector3());
+        const radius = Math.max(footprint.x, footprint.z) / 2;
+
+        const geometry = new THREE.RingGeometry(radius * 1.05, radius * 1.2, 48);
+        const material = new THREE.MeshBasicMaterial({
+            color: accentColor ?? '#ffe066',
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const ring = new THREE.Mesh(geometry, material);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.02;
+        ring.renderOrder = 10;
+        ring.visible = false;
+        return ring;
     }
 
     async _buildShape(skin) {

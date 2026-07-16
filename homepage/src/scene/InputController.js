@@ -5,10 +5,12 @@ const DRAG_THRESHOLD_PX = 4;
 
 /**
  * Translates raw pointer/wheel/touch DOM events on the canvas into semantic
- * intents (`input:dragDelta`, `input:zoomDelta`, `input:pick`). Holds no
- * camera or scene state itself — raycasting needs a camera and a list of
- * pickable objects, which are passed in, but InputController never decides
- * what happens as a result of an intent; that's WorldStateMachine's job.
+ * intents (`input:dragDelta`, `input:zoomDelta`, `input:pick`, `input:hover`).
+ * Holds no camera or scene state itself — raycasting needs a camera and a
+ * list of pickable objects, which are passed in, but InputController never
+ * decides what happens as a result of an intent; that's WorldStateMachine's
+ * job (`input:hover` is the one exception consumed directly in main.js,
+ * since it's a pure visual affordance rather than a state transition).
  */
 export class InputController {
     /**
@@ -62,10 +64,16 @@ export class InputController {
         this.dragMoved = false;
         this.lastX = event.clientX;
         this.lastY = event.clientY;
+        // Orbiting the globe shouldn't leave a stale highlight behind on
+        // whatever island the drag started over.
+        emit('input:hover', { slotId: null });
     }
 
     _onPointerMove(event) {
-        if (!this.dragging) return;
+        if (!this.dragging) {
+            this._hover(event.clientX, event.clientY);
+            return;
+        }
         const dx = event.clientX - this.lastX;
         const dy = event.clientY - this.lastY;
         this.lastX = event.clientX;
@@ -134,23 +142,29 @@ export class InputController {
     }
 
     _pick(clientX, clientY) {
+        emit('input:pick', { slotId: this._raycastSlotId(clientX, clientY) });
+    }
+
+    _hover(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const inBounds =
+            clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+        emit('input:hover', { slotId: inBounds ? this._raycastSlotId(clientX, clientY) : null });
+    }
+
+    _raycastSlotId(clientX, clientY) {
         const rect = this.canvas.getBoundingClientRect();
         this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
         this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
         this.raycaster.setFromCamera(this.pointer, this.camera);
-        const objects = this.getPickableObjects();
-        const hits = this.raycaster.intersectObjects(objects, true);
-
-        if (hits.length === 0) {
-            emit('input:pick', { slotId: null });
-            return;
-        }
+        const hits = this.raycaster.intersectObjects(this.getPickableObjects(), true);
+        if (hits.length === 0) return null;
 
         let hitObject = hits[0].object;
         while (hitObject && !hitObject.userData.slotId) {
             hitObject = hitObject.parent;
         }
-        emit('input:pick', { slotId: hitObject?.userData.slotId ?? null });
+        return hitObject?.userData.slotId ?? null;
     }
 }

@@ -27,6 +27,11 @@ export class WorldStateMachine {
     }
 
     _onPick(slotId) {
+        if (this.state === STATES.FOCUSED) {
+            // Clicking the globe outside the sidepanel dismisses it, same as the close button.
+            this._onSidebarClosed();
+            return;
+        }
         if (this.state !== STATES.ORBITING || !slotId) return;
         this.selectedSlotId = slotId;
         this._transition(STATES.FLYING_TO_FOCUS);

@@ -35,12 +35,10 @@ and the compiled globe app. Render runs this same script
 shaeantoine.io
 ├── site/                # hand-written pages, published as-is
 │   ├── contact.html
-│   ├── reading.html
 │   ├── essays/
 │   ├── projects/
 │   └── static/
-│       ├── css/style.css
-│       └── js/paradox.js   # small easter egg script, runs site-wide
+│       └── css/style.css
 ├── homepage/            # source for the homepage — Three.js + Vite
 ├── scripts/build.sh     # assembles site/ + homepage build into .build/site/
 ├── .build/              # gitignored — build output, regenerated on deploy
