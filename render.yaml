@@ -3,4 +3,4 @@ services:
     name: shaeantoine.io
     env: static
     buildCommand: bash scripts/build.sh
-    staticPublishPath: .build/site
+    staticPublishPath: .build

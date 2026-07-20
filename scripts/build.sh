@@ -5,9 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 rm -rf .build
-mkdir -p .build/site
-cp -R site/. .build/site/
 
-cd homepage
+cd universe
 npm ci
 npm run build

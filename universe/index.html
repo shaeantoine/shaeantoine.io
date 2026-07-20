@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World — Shae McKenna</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
+    <link rel="stylesheet" href="./src/ui/sidebar.css">
+    <link rel="stylesheet" href="./src/ui/landing.css">
+</head>
+<body>
+    <canvas id="world-canvas"></canvas>
+
+    <header id="masthead" class="masthead" hidden>
+        <div class="masthead-id">
+            <div class="masthead-name">Shae McKenna</div>
+            <div class="masthead-role">Currently designing software at Apple</div>
+        </div>
+        <nav class="masthead-links">
+            <button type="button" class="masthead-link" data-body-id="about-me">essays</button>
+            <button type="button" class="masthead-link" data-body-id="about-me">projects</button>
+            <button type="button" class="masthead-link" data-body-id="about-me">contact</button>
+        </nav>
+    </header>
+
+    <div id="landing" class="landing" hidden>
+        <div class="landing-curtain"></div>
+        <div class="landing-content"></div>
+    </div>
+
+    <div id="sidebar" class="sidebar" hidden></div>
+
+    <button id="cluster-return" class="cluster-return" type="button" hidden>← solar system</button>
+    <button id="mode-toggle" class="mode-toggle" type="button" hidden>enter shae's world</button>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
