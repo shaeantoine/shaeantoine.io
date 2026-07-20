@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { standardMaterialFlat } from '../kit/materials.js';
 import { orbitToVector3 } from '../util/orbitCoords.js';
+import { BLOOM_LAYER } from './SceneManager.js';
 
 /**
  * Builds/positions every non-cluster planet body (i.e. everything except
- * Earth, which ZoneLoader/Globe still own). Phase 0 only ships the
- * 'placeholder' render recipe — a flat-shaded icosphere standing in for the
- * bespoke PlanetKit shader recipes that are fast-follow work once this
- * navigation scaffolding is proven out.
+ * Earth, which ZoneLoader/Globe still own). Most bodies still use the
+ * 'placeholder' render recipe (a flat-shaded icosphere); bespoke recipes like
+ * 'grid' (CS) are filled in per-planet as each one earns its own look.
  */
 export class PlanetLoader {
     constructor(parent, bodies) {
@@ -68,13 +68,44 @@ export class PlanetLoader {
     }
 
     _buildRecipe(recipe) {
+        if (recipe.type === 'grid') {
+            return this._buildGridRecipe(recipe);
+        }
         const radius = recipe.radius ?? 2;
         const color = recipe.palette?.core ?? '#888888';
-        // Same faceted-icosphere approach as Globe/Sun, for now — a distinct
-        // per-planet shader (Tron grid, etc.) is fast-follow, not Phase 0.
+        // Same faceted-icosphere approach as Globe/Sun — the shared fallback
+        // for any body that hasn't earned a bespoke recipe yet.
         const geometry = new THREE.IcosahedronGeometry(radius, 1);
         geometry.computeVertexNormals();
         return new THREE.Mesh(geometry, standardMaterialFlat(color));
+    }
+
+    // Tron Legacy's Grid, reinterpreted: a dark core with the same facets
+    // pulled out into a glowing geodesic wireframe. First bespoke per-planet
+    // recipe (CS) — everything else still falls through to the flat-shaded
+    // placeholder above.
+    _buildGridRecipe(recipe) {
+        const radius = recipe.radius ?? 2;
+        const coreColor = recipe.palette?.core ?? '#1c2b2e';
+        const accentColor = recipe.palette?.accent ?? '#6ad1c4';
+        const group = new THREE.Group();
+
+        const coreGeometry = new THREE.IcosahedronGeometry(radius, 1);
+        coreGeometry.computeVertexNormals();
+        group.add(new THREE.Mesh(coreGeometry, standardMaterialFlat(coreColor)));
+
+        // Pulled out fractionally so the lines don't z-fight the core mesh
+        // underneath. Unlit + on the bloom layer, same as the grid-line
+        // accents elsewhere in the kit — this is where the "glow" lives, not
+        // in the core material.
+        const wireGeometry = new THREE.EdgesGeometry(coreGeometry);
+        const wireMaterial = new THREE.LineBasicMaterial({ color: accentColor, toneMapped: false });
+        const wireframe = new THREE.LineSegments(wireGeometry, wireMaterial);
+        wireframe.scale.setScalar(1.01);
+        wireframe.layers.enable(BLOOM_LAYER);
+        group.add(wireframe);
+
+        return group;
     }
 
     // Sized to the just-built base mesh's own footprint. Kept invisible

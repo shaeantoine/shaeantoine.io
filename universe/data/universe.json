@@ -293,8 +293,8 @@
       "kind": "planet",
       "label": "Computer Science",
       "orbit": { "radius": 24, "phaseDeg": 140 },
-      "cameraDistance": 6,
-      "renderRecipe": { "type": "placeholder", "radius": 2.4, "palette": { "core": "#1c2b2e", "accent": "#6ad1c4" } },
+      "cameraDistance": 26,
+      "renderRecipe": { "type": "grid", "radius": 10, "palette": { "core": "#1c2b2e", "accent": "#6ad1c4" } },
       "contentTier": "panel",
       "content": {
         "title": "Software Engineering",

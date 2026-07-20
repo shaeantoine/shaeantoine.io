@@ -11,6 +11,7 @@ import { WorldStateMachine } from './state/WorldStateMachine.js';
 import { STATES } from './state/states.js';
 import { Sidebar } from './ui/Sidebar.js';
 import { Masthead } from './ui/Masthead.js';
+import { PlanetCaption } from './ui/PlanetCaption.js';
 import { ModeToggle } from './ui/ModeToggle.js';
 import { ClusterReturn } from './ui/ClusterReturn.js';
 import { BriefOverlay } from './ui/BriefOverlay.js';
@@ -65,6 +66,7 @@ sceneManager.scene.add(skyDome.mesh);
 const stateMachine = new WorldStateMachine();
 const sidebar = new Sidebar(document.getElementById('sidebar'));
 const masthead = new Masthead(document.getElementById('masthead'));
+const planetCaption = new PlanetCaption(document.getElementById('planet-caption'));
 const modeToggle = new ModeToggle(document.getElementById('mode-toggle'));
 const clusterReturn = new ClusterReturn(document.getElementById('cluster-return'));
 
@@ -93,7 +95,10 @@ on('state:changed', ({ state, mode, selectedBodyId, selectedSlotId, focusStack }
     insideCluster = focusStack.some((frame) => frame.level === 'cluster');
 
     if (state !== STATES.CLUSTER_ORBITING) zoneLoader.setHovered(null);
-    if (state !== STATES.SOLAR_ORBITING) planetLoader.setHovered(null);
+    if (state !== STATES.SOLAR_ORBITING) {
+        planetLoader.setHovered(null);
+        planetCaption.setHovered(null);
+    }
 
     if (state === STATES.FLYING_TO_PLANET) {
         const body = getBody(selectedBodyId);
@@ -137,12 +142,14 @@ on('state:changed', ({ state, mode, selectedBodyId, selectedSlotId, focusStack }
 on('input:hover', ({ id, kind }) => {
     if (currentState === STATES.SOLAR_ORBITING && kind === 'body') {
         planetLoader.setHovered(id);
+        planetCaption.setHovered(id);
         canvas.style.cursor = id ? 'pointer' : '';
     } else if (currentState === STATES.CLUSTER_ORBITING && kind === 'slot') {
         zoneLoader.setHovered(id);
         canvas.style.cursor = id ? 'pointer' : '';
     } else {
         planetLoader.setHovered(null);
+        planetCaption.setHovered(null);
         zoneLoader.setHovered(null);
         canvas.style.cursor = '';
     }

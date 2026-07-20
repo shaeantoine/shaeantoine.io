@@ -1,4 +1,4 @@
-# shaeantoine.io
+# shae.world
 
 I took a bit of a different approach to my personal website. I find
 so many others have very uniform websites. I probably would of been better off just
