@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World — Shae McKenna</title>
+    <title>Shae's World</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap">
-    <link rel="stylesheet" href="./src/ui/sidebar.css">
+    <link rel="stylesheet" href="./src/ui/focusPanel.css">
     <link rel="stylesheet" href="./src/ui/landing.css">
 </head>
 <body>
@@ -25,10 +25,11 @@
         <div class="landing-content"></div>
     </div>
 
-    <div id="sidebar" class="sidebar" hidden></div>
+    <div id="focus-panel" class="focus-panel" hidden></div>
 
-    <button id="cluster-return" class="cluster-return" type="button" hidden>← solar system</button>
-    <button id="mode-toggle" class="mode-toggle" type="button" hidden>enter shae's world</button>
+    <button id="nav-back" class="nav-back" type="button" hidden>← solar system</button>
+
+    <nav id="flywheel" class="flywheel" hidden></nav>
 
     <div id="planet-caption" class="planet-caption" aria-hidden="true">
         <div class="planet-caption-label"></div>

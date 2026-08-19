@@ -1,10 +1,10 @@
 import { on } from '../util/EventBus.js';
 import { STATES } from '../state/states.js';
 
-// Hidden whenever a planet/country sidebar is focused — same "don't compete
-// with focused panel content" reasoning as ModeToggle/ClusterReturn, just
-// applied to the site nav bar instead.
-const HIDDEN_STATES = new Set([STATES.PLANET_FOCUSED, STATES.SLOT_FOCUSED]);
+// Hidden whenever a landmark's panel is focused — same "don't compete with
+// focused panel content" reasoning as NavBack, just applied to the
+// site nav bar instead.
+const HIDDEN_STATES = new Set([STATES.FOCUSED]);
 
 /**
  * The site nav bar (name/role). Hidden until the Brief is dismissed — it

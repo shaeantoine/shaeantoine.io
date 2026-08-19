@@ -1,20 +1,30 @@
 import universeData from '../../data/universe.json';
 
-const MODES = ['geography', 'shaesWorld'];
-
-function assertValidSlot(slot) {
-    if (
-        !slot.id ||
-        typeof slot.position?.lat !== 'number' ||
-        typeof slot.position?.lon !== 'number' ||
-        typeof slot.cameraTargetHeight !== 'number'
-    ) {
-        throw new Error(`universe.json: slot is missing id/position{lat,lon}/cameraTargetHeight: ${JSON.stringify(slot)}`);
+// A landmark is independently focusable/cycleable content anchored to a
+// planet: a country island (kind 'slot', Earth only), an orbiting object
+// (kind 'satellite'), or an object mounted one-at-a-time inside a
+// 'coreReveal' body's see-through core (kind 'core', e.g. Shrine — see
+// PlanetLoader.mountCoreLandmark). Each kind carries its own placement
+// fields alongside the shared id/label/content.
+function assertValidLandmark(landmark, bodyId) {
+    if (!landmark.id || !landmark.label || !landmark.content?.title) {
+        throw new Error(`universe.json: landmark is missing id/label/content.title on body "${bodyId}": ${JSON.stringify(landmark)}`);
     }
-    for (const mode of MODES) {
-        if (!slot.skins[mode]) {
-            throw new Error(`universe.json: slot "${slot.id}" is missing skin "${mode}"`);
+    if (landmark.kind === 'slot') {
+        if (
+            typeof landmark.position?.lat !== 'number' ||
+            typeof landmark.position?.lon !== 'number' ||
+            typeof landmark.cameraTargetHeight !== 'number' ||
+            !landmark.skin
+        ) {
+            throw new Error(`universe.json: slot landmark "${landmark.id}" on body "${bodyId}" is missing position{lat,lon}/cameraTargetHeight/skin`);
         }
+    } else if (landmark.kind === 'satellite' || landmark.kind === 'core') {
+        if (!landmark.model && !landmark.placeholder) {
+            throw new Error(`universe.json: ${landmark.kind} landmark "${landmark.id}" on body "${bodyId}" is missing model or placeholder`);
+        }
+    } else {
+        throw new Error(`universe.json: landmark "${landmark.id}" on body "${bodyId}" has unknown kind "${landmark.kind}"`);
     }
 }
 
@@ -28,14 +38,13 @@ function assertValidBody(body) {
     if (!body.contentTier) {
         throw new Error(`universe.json: body "${body.id}" is missing contentTier`);
     }
-    if (body.contentTier === 'cluster') {
-        if (!Array.isArray(body.cluster?.slots) || body.cluster.slots.length === 0) {
-            throw new Error(`universe.json: cluster body "${body.id}" is missing cluster.slots`);
-        }
-        body.cluster.slots.forEach(assertValidSlot);
-    } else if (!body.content) {
+    if (body.contentTier === 'cluster' && !body.cluster) {
+        throw new Error(`universe.json: cluster body "${body.id}" is missing cluster`);
+    }
+    if (body.contentTier !== 'cluster' && !body.content) {
         throw new Error(`universe.json: body "${body.id}" (contentTier "${body.contentTier}") is missing content`);
     }
+    body.landmarks?.forEach((landmark) => assertValidLandmark(landmark, body.id));
 }
 
 universeData.bodies.forEach(assertValidBody);
@@ -67,18 +76,14 @@ export function getClusterBody() {
     return body;
 }
 
-/** @param {string} slotId @returns the slot from the cluster body's slots, or throws if unknown. */
-export function getSlot(slotId) {
-    const slot = getClusterBody().cluster.slots.find((s) => s.id === slotId);
-    if (!slot) throw new Error(`universe.js: unknown slot "${slotId}"`);
-    return slot;
+/** @param {string} bodyId @returns that body's landmarks, in authored order — empty if it has none. */
+export function getLandmarks(bodyId) {
+    return getBody(bodyId).landmarks ?? [];
 }
 
-/**
- * @param {string} slotId
- * @param {'geography'|'shaesWorld'} mode
- * @returns the skin content for that slot in that mode.
- */
-export function getSkin(slotId, mode) {
-    return getSlot(slotId).skins[mode];
+/** @param {string} bodyId @param {string} landmarkId @returns the landmark, or throws if unknown. */
+export function getLandmark(bodyId, landmarkId) {
+    const landmark = getLandmarks(bodyId).find((l) => l.id === landmarkId);
+    if (!landmark) throw new Error(`universe.js: unknown landmark "${landmarkId}" on body "${bodyId}"`);
+    return landmark;
 }

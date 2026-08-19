@@ -1,15 +1,14 @@
 import * as THREE from 'three';
 import { buildProp } from '../kit/PropKit.js';
-import { standardMaterial } from '../kit/materials.js';
+import { standardMaterial, outlineMaterial } from '../kit/materials.js';
 import { loadGLTF } from '../loaders/gltf.js';
 import { loadOBJ } from '../loaders/obj.js';
-import { dissolveOut, resolveIn } from '../transition/DissolveEffect.js';
 import { latLonToVector3, surfaceNormalAt } from '../util/sphereCoords.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
 /**
- * Builds/tears down each slot's current-skin geometry from universe.json's
+ * Builds/tears down each slot's geography geometry from universe.json's
  * cluster data, mounting into `parent` (Earth's own group, positioned at its
  * orbit location — not necessarily the scene root). The only module that
  * touches both the kit (procedural props) and the GLTFLoader (hand-authored
@@ -24,8 +23,8 @@ export class ZoneLoader {
         this.islandScale = islandScale;
         /** @type {Map<string, THREE.Group>} slotId -> currently-mounted group */
         this.mounted = new Map();
-        /** @type {Map<string, THREE.Mesh>} slotId -> that island's hover ring */
-        this.rings = new Map();
+        /** @type {Map<string, THREE.Group>} slotId -> that island's hover outline */
+        this.outlines = new Map();
         this.hoveredSlotId = null;
     }
 
@@ -34,41 +33,23 @@ export class ZoneLoader {
         return Array.from(this.mounted.values());
     }
 
-    /** Shows the hover ring for `slotId` (or hides all rings if null). */
+    /** Shows the hover outline for `slotId` (or hides all outlines if null). */
     setHovered(slotId) {
         if (slotId === this.hoveredSlotId) return;
-        const prevRing = this.rings.get(this.hoveredSlotId);
-        if (prevRing) prevRing.visible = false;
+        const prevOutline = this.outlines.get(this.hoveredSlotId);
+        if (prevOutline) prevOutline.visible = false;
         this.hoveredSlotId = slotId;
-        const nextRing = this.rings.get(slotId);
-        if (nextRing) nextRing.visible = true;
+        const nextOutline = this.outlines.get(slotId);
+        if (nextOutline) nextOutline.visible = true;
     }
 
-    /** Builds every slot's skin for `mode` with no transition — used on initial load. */
-    async loadAll(mode) {
-        await Promise.all(this.slots.map((slot) => this._mount(slot, mode)));
+    /** Builds every slot's geography skin — used on initial load. */
+    async loadAll() {
+        await Promise.all(this.slots.map((slot) => this._mount(slot)));
     }
 
-    /** Swaps every slot from its current skin to `mode`'s skin via dissolve-out/resolve-in. */
-    async transitionTo(mode) {
-        await Promise.all(
-            this.slots.map(async (slot) => {
-                const outgoing = this.mounted.get(slot.id);
-                if (outgoing) {
-                    await dissolveOut(outgoing);
-                    this.parent.remove(outgoing);
-                    this.mounted.delete(slot.id);
-                    this.rings.delete(slot.id);
-                    if (this.hoveredSlotId === slot.id) this.hoveredSlotId = null;
-                }
-                const incoming = await this._mount(slot, mode);
-                await resolveIn(incoming);
-            })
-        );
-    }
-
-    async _mount(slot, mode) {
-        const skin = slot.skins[mode];
+    async _mount(slot) {
+        const skin = slot.skin;
         const group = new THREE.Group();
         const { lat, lon } = slot.position;
         latLonToVector3(lat, lon, this.globeRadius, group.position);
@@ -76,10 +57,7 @@ export class ZoneLoader {
         group.userData.slotId = slot.id;
 
         // A nested content group carries the permanent islandScale bump,
-        // separate from `group`'s own scale — DissolveEffect animates
-        // `group.scale` directly (0.7 <-> 1) on every mode toggle, so scaling
-        // island content there instead avoids that tween clobbering it back
-        // down to a literal 1.0 on the next transition.
+        // separate from `group`'s own scale.
         const content = new THREE.Group();
         content.scale.setScalar(this.islandScale);
         group.add(content);
@@ -87,9 +65,9 @@ export class ZoneLoader {
         const base = await this._buildShape(skin);
         if (base) content.add(base);
 
-        const ring = this._buildHighlightRing(base, skin.palette?.accent);
-        content.add(ring);
-        this.rings.set(slot.id, ring);
+        const outline = this._buildHoverOutline(base);
+        content.add(outline);
+        this.outlines.set(slot.id, outline);
 
         const landmark = await this._buildLandmark(skin);
         if (landmark) content.add(landmark);
@@ -103,35 +81,25 @@ export class ZoneLoader {
         return group;
     }
 
-    // Ground-flush ring, sized to the just-built shape's own footprint (measured
-    // before it's parented, so the box reflects only its own scale/rotation —
-    // not islandScale or the globe placement transform). Kept invisible until
-    // hovered rather than built on demand, since sizing depends on `base`'s
-    // geometry, which only exists right here in `_mount`.
-    _buildHighlightRing(base, accentColor) {
-        const box = new THREE.Box3();
-        if (base) box.setFromObject(base);
-        const footprint = box.isEmpty() ? new THREE.Vector3(3.2, 1, 3.2) : box.getSize(new THREE.Vector3());
-        const radius = Math.max(footprint.x, footprint.z) / 2;
-
-        const geometry = new THREE.RingGeometry(radius * 1.05, radius * 1.2, 48);
-        const material = new THREE.MeshBasicMaterial({
-            color: accentColor ?? '#ffe066',
-            transparent: true,
-            opacity: 0.85,
-            side: THREE.DoubleSide,
-            depthWrite: false
+    // The "inflated backface hull" outline (see materials.js's
+    // outlineMaterial doc comment and PlanetLoader's own _buildHoverOutline,
+    // which this mirrors) — `base` can be null (see _buildShape), in which
+    // case there's nothing to clone and the island just gets no outline.
+    // Kept invisible until hovered.
+    _buildHoverOutline(base, scaleFactor = 1.06) {
+        if (!base) {
+            const empty = new THREE.Group();
+            empty.visible = false;
+            return empty;
+        }
+        const outline = base.clone(true);
+        outline.traverse((child) => {
+            if (child.isMesh) child.material = outlineMaterial();
+            else if (child.geometry) child.visible = false;
         });
-        // Keeps the highlight a pure accent color under the scene's ACES
-        // tone mapping, rather than being darkened/desaturated like lit
-        // geometry.
-        material.toneMapped = false;
-        const ring = new THREE.Mesh(geometry, material);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.02;
-        ring.renderOrder = 10;
-        ring.visible = false;
-        return ring;
+        outline.scale.multiplyScalar(scaleFactor);
+        outline.visible = false;
+        return outline;
     }
 
     async _buildShape(skin) {

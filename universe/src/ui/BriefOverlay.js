@@ -7,14 +7,16 @@ import { emit } from '../util/EventBus.js';
 const INTRO_NEXT_DELAY_MS = 1000;
 const CURTAIN_FADE_DELAY_MS = 1800;
 const CURTAIN_FADE_DURATION_MS = 3000;
-const EXPLORE_BUTTON_DELAY_MS = CURTAIN_FADE_DELAY_MS + CURTAIN_FADE_DURATION_MS;
 
 /**
  * The landing sequence: a few one-sentence "concept" cards (solid black, no
- * scene visible or reachable), then the Brief blurb — which starts on the
- * same black curtain, lets the curtain fade to reveal the already-live 3D
- * scene behind it after a beat, and ends with an "explore" CTA alongside the
- * blurb's existing inline links.
+ * scene visible or reachable), then the Brief blurb. The curtain starts
+ * fading on the last intro card — "You can click on the links..." — so the
+ * already-live 3D scene unveils behind the reader while that card is still
+ * up, rather than waiting for the blurb. The blurb step carries a fallback
+ * trigger for the same fade (see _scheduleCurtainReveal) for the "Skip"
+ * path, which jumps straight past the intro cards, and ends with an
+ * "explore" CTA alongside its existing inline links.
  *
  * Deliberately NOT a WorldStateMachine state — this is presentational
  * sequencing with exactly two exits, both already-existing events:
@@ -51,6 +53,15 @@ export class BriefOverlay {
 
     _revealAfterDelay(el, ms) {
         this._timers.push(setTimeout(() => el.classList.add('intro-affordance--visible'), this._delay(ms)));
+    }
+
+    // Idempotent (classList.add is a no-op if already applied), so it's safe
+    // to call from both the last intro card and the blurb step — whichever
+    // fires first wins, and the other is a harmless no-op re-application.
+    _scheduleCurtainReveal() {
+        this._timers.push(
+            setTimeout(() => this.curtain.classList.add('landing-curtain--faded'), this._delay(CURTAIN_FADE_DELAY_MS))
+        );
     }
 
     _clearTimers() {
@@ -94,6 +105,11 @@ export class BriefOverlay {
 
         this.content.appendChild(actions);
         this._revealAfterDelay(actions, INTRO_NEXT_DELAY_MS);
+
+        // Last intro card (currently "You can click on the links...") starts
+        // the curtain fade so the scene unveils in the background while it's
+        // still on screen, rather than making the reader wait for the blurb.
+        if (this.stepIndex === this.steps.length - 2) this._scheduleCurtainReveal();
     }
 
     _renderBlurbStep() {
@@ -117,15 +133,14 @@ export class BriefOverlay {
 
         const explore = document.createElement('button');
         explore.type = 'button';
-        explore.className = 'explore-button intro-affordance';
+        explore.className = 'explore-button';
         explore.textContent = 'explore the universe';
         explore.addEventListener('click', () => this._dismiss());
         this.content.appendChild(explore);
-        this._revealAfterDelay(explore, EXPLORE_BUTTON_DELAY_MS);
 
-        this._timers.push(
-            setTimeout(() => this.curtain.classList.add('landing-curtain--faded'), this._delay(CURTAIN_FADE_DELAY_MS))
-        );
+        // Fallback for the "Skip" path, which jumps straight here without
+        // ever rendering the last intro card that normally triggers this.
+        this._scheduleCurtainReveal();
     }
 
     _advance() {

@@ -1,7 +1,7 @@
 /* --- Landing: "The Brief" --- */
 /* The live 3D scene shows through underneath both before and after the
    Brief text is dismissed. Text uses the same light palette as the rest of
-   the dark-mode UI (sidebar.css's --text/--bright), not the old photo
+   the dark-mode UI (focusPanel.css's --text/--bright), not the old photo
    splash's black-on-light scheme.
 
    Layout: the Brief paragraphs sit centered on screen, with no masthead or

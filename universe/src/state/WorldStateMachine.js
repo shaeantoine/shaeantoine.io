@@ -1,42 +1,49 @@
 import { on, emit } from '../util/EventBus.js';
-import { STATES, MODES } from './states.js';
-import { getBody } from '../data/universe.js';
+import { STATES } from './states.js';
+import { getBody, getLandmark, getLandmarks } from '../data/universe.js';
 
 /**
  * The single source of truth for "what happens next." Every other module
- * (CameraRig, ZoneLoader, PlanetLoader, Sidebar, ModeToggle) only reacts to
+ * (CameraRig, ZoneLoader, PlanetLoader, FocusPanel) only reacts to
  * the 'state:changed' events this emits — none of them decide transitions
  * themselves.
  *
  * Navigation is two levels deep: the outer solar system (SOLAR_ORBITING,
- * picking a planet), and — only for the one body with contentTier
- * 'cluster' (today, always Earth) — an inner cluster orbit (CLUSTER_ORBITING,
- * picking a country, mirroring the site's original single-level geography/
- * shaesWorld toggle). `focusStack` tracks how deep the camera currently is:
- * empty at the solar level, one `{level:'solar', bodyId}` entry while a
- * non-cluster planet's sidebar is open, or one `{level:'cluster', bodyId,
- * slotId}` entry while inside Earth (slotId set only while a country's
- * sidebar is open).
+ * picking a planet), and an inner body orbit once a planet's been flown to
+ * (CLUSTER_ORBITING for Earth specifically, BODY_ORBITING for every other
+ * planet). `focusStack` tracks how deep the camera currently is: empty at
+ * the solar level, one `{bodyId}` entry while orbiting/focused inside a
+ * body. Landmark focus (a country slot or an orbiting satellite) is tracked
+ * separately via `focusTarget = {kind, id, parentBodyId} | null` rather than
+ * as its own focus-stack level — closing a focused landmark always returns
+ * to orbiting the same body, never pops past it (see _onCloseRequested).
+ *
+ * Arrival at any body always lands in CLUSTER_ORBITING/BODY_ORBITING first —
+ * no auto-selecting a first landmark. A landmark only becomes focused via
+ * explicit pick (ui:pickLandmark, a dock click or 3D slot click) or cycle
+ * (ui:cycleLandmark, prev/next while already focused).
  */
 export class WorldStateMachine {
     constructor() {
         this.state = STATES.IDLE_LOADING;
-        this.mode = MODES.GEOGRAPHY;
         this.focusStack = [];
         this.selectedBodyId = null;
-        this.selectedSlotId = null;
-        this.pendingModeToggle = false;
+        this.focusTarget = null;
 
-        this._pendingSlotId = null;
+        this._pendingLandmarkId = null;
 
         on('input:pick', ({ id, kind }) => this._onPick(id, kind));
-        on('ui:toggleMode', () => this._onToggleMode());
         on('ui:leaveCluster', () => this._onLeaveCluster());
+        // Sustained zoom-out past CameraRig's elastic limit reads as the same
+        // intent as the explicit leave-cluster button — see CameraRig's
+        // _checkOvershootExit(). Scoped to CLUSTER_ORBITING/BODY_ORBITING;
+        // _onLeaveCluster already no-ops outside those states.
+        on('camera:overshootExit', () => this._onLeaveCluster());
         on('camera:flyToComplete', () => this._onFlyComplete());
         on('ui:sidebarClosed', () => this._onCloseRequested());
-        on('zones:transitionComplete', () => this._onTransitionComplete());
         on('ui:navigateToTarget', ({ bodyId, slotId }) => this._onNavigateToTarget(bodyId, slotId));
-        on('ui:pickSlot', ({ slotId }) => this._onPick(slotId, 'slot'));
+        on('ui:pickLandmark', ({ landmarkId }) => this._onPickLandmark(landmarkId));
+        on('ui:cycleLandmark', ({ dir }) => this._onCycleLandmark(dir));
     }
 
     /** Call once initial scene/zone/planet setup is done to enter the interactive loop. */
@@ -44,14 +51,26 @@ export class WorldStateMachine {
         this._transition(STATES.SOLAR_ORBITING);
     }
 
+    _isOrbitingBody() {
+        return this.state === STATES.CLUSTER_ORBITING || this.state === STATES.BODY_ORBITING;
+    }
+
     _isFocused() {
-        return this.state === STATES.PLANET_FOCUSED || this.state === STATES.SLOT_FOCUSED;
+        return this.state === STATES.FOCUSED;
     }
 
     _onPick(id, kind) {
         if (this._isFocused()) {
-            // Clicking elsewhere (on any body/island, or the empty void)
-            // dismisses the open sidebar, same as the close button.
+            // Clicking a 'coreReveal' body's own sphere while one of its
+            // landmarks is already focused reads as "show me the next one"
+            // rather than "close" — that's the whole point of the sphere
+            // (see PlanetLoader's class doc comment) — everywhere else,
+            // clicking elsewhere (any other body/island, or the empty void)
+            // still dismisses the open panel, same as the close button.
+            if (kind === 'body' && id === this.selectedBodyId && this._coreLandmarks(id).length) {
+                this._onCycleLandmark(1);
+                return;
+            }
             this._onCloseRequested();
             return;
         }
@@ -61,9 +80,16 @@ export class WorldStateMachine {
             this.selectedBodyId = id;
             this._transition(STATES.FLYING_TO_PLANET);
         } else if (this.state === STATES.CLUSTER_ORBITING && kind === 'slot') {
-            this.selectedSlotId = id;
-            this._transition(STATES.FLYING_TO_SLOT);
+            this._onPickLandmark(id);
+        } else if (this.state === STATES.BODY_ORBITING && kind === 'body' && id === this.selectedBodyId) {
+            const first = this._coreLandmarks(id)[0];
+            if (first) this._onPickLandmark(first.id);
         }
+    }
+
+    /** @returns `bodyId`'s 'core'-kind landmarks (a 'coreReveal' body's one-at-a-time contents — see PlanetLoader), in authored order. */
+    _coreLandmarks(bodyId) {
+        return getLandmarks(bodyId).filter((l) => l.kind === 'core');
     }
 
     /**
@@ -74,39 +100,18 @@ export class WorldStateMachine {
      * focused/entered first so the fly-in always starts from a clean state.
      */
     _onNavigateToTarget(bodyId, slotId) {
-        if (
-            [STATES.FLYING_TO_PLANET, STATES.FLYING_TO_SLOT, STATES.RETURNING, STATES.MODE_TRANSITIONING].includes(
-                this.state
-            )
-        ) {
+        if ([STATES.FLYING_TO_PLANET, STATES.FLYING_TO_LANDMARK, STATES.RETURNING].includes(this.state)) {
             return;
         }
         if (this._isFocused()) this._onCloseRequested();
-        if (this.state === STATES.CLUSTER_ORBITING) this._onLeaveCluster();
+        if (this._isOrbitingBody()) this._onLeaveCluster();
         this.selectedBodyId = bodyId;
-        this._pendingSlotId = slotId ?? null;
+        this._pendingLandmarkId = slotId ?? null;
         this._transition(STATES.FLYING_TO_PLANET);
     }
 
-    _onToggleMode() {
-        if (this.state === STATES.CLUSTER_ORBITING) {
-            this._transition(STATES.MODE_TRANSITIONING);
-        } else if (this.state === STATES.SLOT_FOCUSED) {
-            // Resolved ambiguity: toggling while a country is focused
-            // collapses to the cluster orbit view first, then transitions —
-            // no in-place swap.
-            this.pendingModeToggle = true;
-            this._topFocus().slotId = null;
-            this.selectedSlotId = null;
-            this._transition(STATES.RETURNING);
-        }
-        // Ignored at every other state — prevents re-entrant/overlapping
-        // transitions, and toggling only ever makes sense inside Earth's
-        // cluster (ModeToggle is hidden everywhere else).
-    }
-
     _onLeaveCluster() {
-        if (this.state !== STATES.CLUSTER_ORBITING) return;
+        if (!this._isOrbitingBody()) return;
         this.focusStack.pop();
         this._transition(STATES.RETURNING);
     }
@@ -114,60 +119,57 @@ export class WorldStateMachine {
     _onFlyComplete() {
         if (this.state === STATES.FLYING_TO_PLANET) {
             const body = getBody(this.selectedBodyId);
-            if (body.contentTier === 'cluster') {
-                this.focusStack.push({ level: 'cluster', bodyId: body.id, slotId: null });
-                this._transition(STATES.CLUSTER_ORBITING);
-                if (this._pendingSlotId) {
-                    this.selectedSlotId = this._pendingSlotId;
-                    this._pendingSlotId = null;
-                    this._transition(STATES.FLYING_TO_SLOT);
-                }
-            } else {
-                this.focusStack.push({ level: 'solar', bodyId: body.id });
-                this._transition(STATES.PLANET_FOCUSED);
+            this.focusStack.push({ bodyId: body.id });
+            this._transition(body.contentTier === 'cluster' ? STATES.CLUSTER_ORBITING : STATES.BODY_ORBITING);
+            if (this._pendingLandmarkId) {
+                const landmarkId = this._pendingLandmarkId;
+                this._pendingLandmarkId = null;
+                this._onPickLandmark(landmarkId);
             }
-        } else if (this.state === STATES.FLYING_TO_SLOT) {
-            this._topFocus().slotId = this.selectedSlotId;
-            this._transition(STATES.SLOT_FOCUSED);
+        } else if (this.state === STATES.FLYING_TO_LANDMARK) {
+            this._transition(STATES.FOCUSED);
         } else if (this.state === STATES.RETURNING) {
             this._onReturnComplete();
         }
     }
 
+    /** Absolute jump to a specific landmark of the currently orbited body — used by 3D slot clicks and Flywheel picks alike. */
+    _onPickLandmark(landmarkId) {
+        if (!this._isOrbitingBody()) return;
+        const landmark = getLandmark(this.selectedBodyId, landmarkId);
+        this.focusTarget = { kind: landmark.kind, id: landmark.id, parentBodyId: this.selectedBodyId };
+        this._transition(STATES.FLYING_TO_LANDMARK);
+    }
+
+    /**
+     * Cycles to the next/previous landmark of the currently focused body —
+     * ignored outside FOCUSED (e.g. mid-fly) to avoid stomping an in-flight
+     * tween. Re-enters FLYING_TO_LANDMARK for the new target.
+     */
+    _onCycleLandmark(dir) {
+        if (!this._isFocused() || !this.focusTarget) return;
+        const landmarks = getLandmarks(this.focusTarget.parentBodyId).filter((l) => l.kind === this.focusTarget.kind);
+        const currentIndex = landmarks.findIndex((l) => l.id === this.focusTarget.id);
+        const nextIndex = (currentIndex + dir + landmarks.length) % landmarks.length;
+        this.focusTarget = { ...this.focusTarget, id: landmarks[nextIndex].id };
+        this._transition(STATES.FLYING_TO_LANDMARK);
+    }
+
     _onReturnComplete() {
-        if (this.pendingModeToggle) {
-            this.pendingModeToggle = false;
-            this._transition(STATES.MODE_TRANSITIONING);
-            return;
-        }
         const top = this._topFocus();
         if (!top) {
             this.selectedBodyId = null;
-            this.selectedSlotId = null;
             this._transition(STATES.SOLAR_ORBITING);
-        } else if (top.level === 'cluster') {
-            this.selectedSlotId = null;
-            this._transition(STATES.CLUSTER_ORBITING);
+        } else {
+            this._transition(getBody(top.bodyId).contentTier === 'cluster' ? STATES.CLUSTER_ORBITING : STATES.BODY_ORBITING);
         }
     }
 
+    /** Pops only the focused landmark, returning to orbiting the same body — never all the way back to solar. Leaving a body entirely is a separate intent (ui:leaveCluster). */
     _onCloseRequested() {
-        if (this.state === STATES.PLANET_FOCUSED) {
-            this.focusStack.pop();
-            this.selectedBodyId = null;
-            this._transition(STATES.RETURNING);
-        } else if (this.state === STATES.SLOT_FOCUSED) {
-            // Pop only the slot focus — stays inside the cluster. Leaving
-            // Earth entirely is a separate intent (ui:leaveCluster).
-            this._topFocus().slotId = null;
-            this._transition(STATES.RETURNING);
-        }
-    }
-
-    _onTransitionComplete() {
-        if (this.state !== STATES.MODE_TRANSITIONING) return;
-        this.selectedSlotId = null;
-        this._transition(STATES.CLUSTER_ORBITING);
+        if (!this._isFocused()) return;
+        this.focusTarget = null;
+        this._transition(STATES.RETURNING);
     }
 
     _topFocus() {
@@ -175,15 +177,11 @@ export class WorldStateMachine {
     }
 
     _transition(newState) {
-        if (newState === STATES.MODE_TRANSITIONING) {
-            this.mode = this.mode === MODES.GEOGRAPHY ? MODES.SHAES_WORLD : MODES.GEOGRAPHY;
-        }
         this.state = newState;
         emit('state:changed', {
             state: this.state,
-            mode: this.mode,
             selectedBodyId: this.selectedBodyId,
-            selectedSlotId: this.selectedSlotId,
+            focusTarget: this.focusTarget,
             focusStack: this.focusStack
         });
     }

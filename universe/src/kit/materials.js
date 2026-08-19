@@ -46,15 +46,11 @@ export function standardMaterialFlat(color) {
 const globeMaterialCache = new Map();
 
 /**
- * Same faceted-icosphere PBR family as `standardMaterialFlat`, but with
- * softer specular response — lower metalness and higher roughness — cached
- * separately since it's tuned specifically for Globe's low-poly Earth.
- * `standardMaterialFlat`'s sharper "cut gem" specular blows out an entire
- * facet at once at grazing light angles (each flat-shaded facet has one
- * constant normal, so there's no falloff across it), which reads as harsh
- * glare rather than a highlight on a body this size and this central to the
- * view. Spreading the highlight out keeps the faceted look without the
- * flash.
+ * Same PBR family as `standardMaterialFlat`, but with softer specular
+ * response — lower metalness and higher roughness — cached separately since
+ * it's tuned specifically for Globe's smooth, rounded Earth (a wide, soft
+ * highlight reads better on a body this size and this central to the view
+ * than a sharper specular would).
  */
 export function standardMaterialGlobe(color) {
     const key = typeof color === 'number' ? color : new THREE.Color(color).getHex();
@@ -67,6 +63,28 @@ export function standardMaterialGlobe(color) {
     });
     globeMaterialCache.set(key, material);
     return material;
+}
+
+let hoverOutlineMaterial = null;
+
+/**
+ * Shared unlit white material for the "inflated backface hull" hover
+ * outline (see PlanetLoader/ZoneLoader's _buildHoverOutline): rendering the
+ * BackSide of a mesh scaled up a few percent hides its backfaces behind the
+ * real (smaller, front-facing) object everywhere except right at the
+ * silhouette edge, where the enlarged hull peeks out as a clean rim. One
+ * instance for every outline in the scene — always the same flat white,
+ * never keyed by accent color like the materials above.
+ */
+export function outlineMaterial() {
+    if (!hoverOutlineMaterial) {
+        hoverOutlineMaterial = new THREE.MeshBasicMaterial({
+            color: '#ffffff',
+            side: THREE.BackSide,
+            toneMapped: false
+        });
+    }
+    return hoverOutlineMaterial;
 }
 
 const texturedMaterialCache = new Map();

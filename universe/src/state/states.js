@@ -4,22 +4,22 @@ export const STATES = {
     // Outer view: orbiting the sun, all planets visible.
     SOLAR_ORBITING: 'SOLAR_ORBITING',
     FLYING_TO_PLANET: 'FLYING_TO_PLANET',
-    // A non-cluster planet's sidebar is open (panel content tier).
-    PLANET_FOCUSED: 'PLANET_FOCUSED',
 
-    // Inside Earth: mirrors the old flat ORBITING/FOCUSED pair, scoped one
-    // level deeper in the focus stack.
+    // Free-orbiting any non-cluster planet body, no landmark focused.
+    BODY_ORBITING: 'BODY_ORBITING',
+
+    // Inside Earth (the one 'cluster' body) — mirrors BODY_ORBITING, scoped
+    // one level deeper in the focus stack; kept distinct because
+    // ZoneLoader-vs-PlanetLoader pickables hinge on "is this Earth
+    // specifically."
     CLUSTER_ORBITING: 'CLUSTER_ORBITING',
-    FLYING_TO_SLOT: 'FLYING_TO_SLOT',
-    SLOT_FOCUSED: 'SLOT_FOCUSED',
+
+    // A landmark (country slot or orbiting satellite) is being flown to, or
+    // is focused with its FocusPanel open. `WorldStateMachine.focusTarget`
+    // (`{kind, id, parentBodyId}`) carries which one.
+    FLYING_TO_LANDMARK: 'FLYING_TO_LANDMARK',
+    FOCUSED: 'FOCUSED',
 
     // Generalized: pops one level off the focus stack regardless of depth.
-    RETURNING: 'RETURNING',
-    // Only legal while CLUSTER_ORBITING.
-    MODE_TRANSITIONING: 'MODE_TRANSITIONING'
-};
-
-export const MODES = {
-    GEOGRAPHY: 'geography',
-    SHAES_WORLD: 'shaesWorld'
+    RETURNING: 'RETURNING'
 };

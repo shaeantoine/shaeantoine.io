@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "sun": { "radius": 4, "color": "#fff3c4" },
   "camera": {
     "solarOrbitRadius": 90,
@@ -9,8 +9,6 @@
   "brief": {
     "intro": [
       "Okay, heads up before you go any further.",
-      "I've taken a bit of a different apporach with my personal website (lol).",
-      "This site's laid out as a universe. I've included sections like about me, projects and essays but each as its own planet.",
       "You can click on the links in the next section to go to a specific section, or explore the universe yourself!"
     ],
     "paragraphs": [
@@ -29,11 +27,8 @@
         { "text": "." }
       ],
       [
-        { "text": "I love reading, amoungst other "},
-        { "text": "hobbies", "target": { "bodyId": "hobbies" }},
-        { "text": ". " },
-        { "text": "Economics ", "target": { "bodyId": "economics" }},
-        { "text": " and history both have special places in my heart."}
+        { "text": "I love reading, amoungst other hobbies. " },
+        { "text": "Economics and history both have special places in my heart."}
       ]
     ]
   },
@@ -50,294 +45,310 @@
         "islandScale": 2.0,
         "orbitRadius": 34,
         "orbitMinPolar": 0.02,
-        "orbitMaxPolar": 3.121592653589793,
-        "slots": [
-          {
-            "id": "slot-1",
-            "position": { "lat": -15, "lon": -60 },
-            "cameraTargetHeight": 0.5,
-            "cameraDistance": 6,
-            "skins": {
-              "geography": {
-                "id": "nz",
-                "label": "New Zealand",
-                "palette": { "terrain": "#4f8f52", "accent": "#d9c873" },
-                "shape": { "model": "models/geo/nz/nz.obj", "palette": "models/geo/nz/nz_palette.png", "scale": 1.5, "rotationY": 30 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "New Zealand",
-                  "subtitle": "Birth country",
-                  "timeline": [
-                    { "period": "Early childhood", "text": "Born here." },
-                    { "period": "Primary school", "text": "Started school in New Zealand before the family's first move abroad." }
-                  ],
-                  "images": []
-                }
-              },
-              "shaesWorld": {
-                "id": "software-engineering",
-                "label": "Software Engineering",
-                "palette": { "terrain": "#1c2b2e", "accent": "#6ad1c4" },
-                "shape": { "base": "kit:groundPad", "scale": 1.0 },
-                "landmark": { "kit": "gridPlane", "position": [0, 0, 0], "scale": 1.4 },
-                "props": [
-                  { "kit": "column", "position": [1.3, 0, -0.8], "scale": 0.7, "paletteOverride": "#6ad1c4" },
-                  { "kit": "column", "position": [-1.3, 0, -0.8], "scale": 0.7, "paletteOverride": "#6ad1c4" },
-                  { "kit": "rock", "position": [0.6, 0, 1.2], "scale": 0.6, "paletteOverride": "#3a4a4d" }
-                ],
-                "sidebar": {
-                  "title": "Software Engineering",
-                  "subtitle": "Reinterpreting Tron's Grid",
-                  "timeline": [
-                    { "period": "Present", "text": "ML infrastructure and systems programming — the machinery between a trained model and something useful happening in the world." }
-                  ],
-                  "images": []
-                }
-              }
-            }
+        "orbitMaxPolar": 3.121592653589793
+      },
+      "landmarks": [
+        {
+          "id": "nz",
+          "kind": "slot",
+          "label": "New Zealand",
+          "position": { "lat": -15, "lon": -60 },
+          "cameraTargetHeight": 0.5,
+          "cameraDistance": 6,
+          "skin": {
+            "palette": { "terrain": "#4f8f52", "accent": "#d9c873" },
+            "shape": { "model": "models/geo/nz/nz.obj", "palette": "models/geo/nz/nz_palette.png", "scale": 1.5, "rotationY": 30 },
+            "landmark": null,
+            "props": []
           },
-          {
-            "id": "slot-2",
-            "position": { "lat": 10, "lon": 110 },
-            "cameraTargetHeight": 0.5,
-            "cameraDistance": 6,
-            "skins": {
-              "geography": {
-                "id": "uae",
-                "label": "UAE",
-                "palette": { "terrain": "#e0c583", "accent": "#f2e6c2" },
-                "shape": { "model": "models/geo/uae/uae.obj", "palette": "models/geo/uae/uae_palette.png", "scale": 1.5, "rotationY": 2 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "UAE",
-                  "subtitle": "Two chapters, one home",
-                  "timeline": [
-                    { "period": "Ch. 1 — Abu Dhabi", "text": "Primary school. Snowboarding, of all things, in the middle of the desert." },
-                    { "period": "Ch. 2 — Dubai", "text": "High school. Economics classes that stuck. Rugby. The New Zealand consulate, a small anchor to home." }
-                  ],
-                  "images": []
-                }
-              },
-              "shaesWorld": {
-                "id": "economics",
-                "label": "Economics",
-                "palette": { "terrain": "#3a3226", "accent": "#c9a866" },
-                "shape": { "model": "models/geo/economics/economics.obj", "palette": "models/geo/economics/economics_palette.png", "scale": 1.5, "rotationY": 0 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "Economics",
-                  "subtitle": "Reinterpreting the MIT Economics Department",
-                  "timeline": [
-                    { "period": "First contact", "text": "Advanced economics classes in Dubai first pulled me toward the discipline." }
-                  ],
-                  "images": []
-                }
-              }
-            }
-          },
-          {
-            "id": "slot-3",
-            "position": { "lat": 15, "lon": 150 },
-            "cameraTargetHeight": 0.5,
-            "cameraDistance": 6,
-            "skins": {
-              "geography": {
-                "id": "india",
-                "label": "India",
-                "palette": { "terrain": "#c97a4a", "accent": "#e8b979" },
-                "shape": { "model": "models/geo/india/india.obj", "palette": "models/geo/india/india_palette.png", "scale": 1.5, "rotationY": 2 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "India",
-                  "subtitle": "Middle school years",
-                  "timeline": [
-                    { "period": "Middle school", "text": "Musical theatre. Jiu-jitsu. Ballet — a strange and good combination." }
-                  ],
-                  "images": []
-                }
-              },
-              "shaesWorld": {
-                "id": "marketing",
-                "label": "Marketing",
-                "palette": { "terrain": "#e8e8e8", "accent": "#9a9a9a" },
-                "shape": { "model": "models/geo/marketing/marketing.obj", "palette": "models/geo/marketing/marketing_palette.png", "scale": 1.5, "rotationY": 0 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "Marketing",
-                  "subtitle": "Reinterpreting an Apple Retail Store",
-                  "timeline": [
-                    { "period": "Present", "text": "A minimalist, glass-and-steel storefront — evocative of the clarity Apple brings to product marketing, not a literal reproduction of any specific store." }
-                  ],
-                  "images": []
-                }
-              }
-            }
-          },
-          {
-            "id": "slot-4",
-            "position": { "lat": 0, "lon": -90 },
-            "cameraTargetHeight": 0.5,
-            "cameraDistance": 6,
-            "skins": {
-              "geography": {
-                "id": "australia",
-                "label": "Australia",
-                "palette": { "terrain": "#b06a3a", "accent": "#e8a868" },
-                "shape": { "model": "models/geo/australia/australia.obj", "palette": "models/geo/australia/australia_palette.png", "scale": 1.5, "rotationY": 5 },
-                "landmark": null,
-                "props": [],
-                "sidebar": {
-                  "title": "Australia",
-                  "subtitle": "University and career",
-                  "timeline": [
-                    { "period": "University of Sydney", "text": "Mathematics. Machine learning." },
-                    { "period": "Career", "text": "Apple, Amazon, Deloitte." }
-                  ],
-                  "images": []
-                }
-              },
-              "shaesWorld": {
-                "id": "research",
-                "label": "Research",
-                "palette": { "terrain": "#c9b896", "accent": "#8a7a5a" },
-                "shape": { "base": "kit:groundPad", "scale": 1.0 },
-                "landmark": { "kit": "building", "position": [0, 0, 0], "scale": 1.4, "paletteOverride": "#d9c9a3" },
-                "props": [
-                  { "kit": "column", "position": [1.1, 0, 0.7], "scale": 0.9, "paletteOverride": "#c9b896" },
-                  { "kit": "column", "position": [-1.1, 0, 0.7], "scale": 0.9, "paletteOverride": "#c9b896" },
-                  { "kit": "tree", "position": [0, 0, -1.3], "scale": 0.7 }
-                ],
-                "sidebar": {
-                  "title": "Research",
-                  "subtitle": "Reinterpreting the USYD Mathematics Department",
-                  "timeline": [
-                    { "period": "First research", "text": "The University of Sydney's Mathematics Department, where I first conducted research." }
-                  ],
-                  "images": []
-                }
-              }
-            }
-          },
-          {
-            "id": "slot-5",
-            "position": { "lat": 90, "lon": 0 },
-            "cameraTargetHeight": 0.5,
-            "cameraDistance": 6,
-            "skins": {
-              "geography": {
-                "id": "home-base",
-                "label": "Home Base",
-                "palette": { "terrain": "#5a5a5a", "accent": "#8a8a8a" },
-                "shape": { "base": "kit:groundPad", "scale": 0.8 },
-                "landmark": null,
-                "props": [
-                  { "kit": "hill", "position": [0, 0, 0], "scale": 0.6, "paletteOverride": "#6a6a6a" }
-                ],
-                "sidebar": {
-                  "title": "Home Base",
-                  "subtitle": "Between places",
-                  "timeline": [],
-                  "images": []
-                }
-              },
-              "shaesWorld": {
-                "id": "personal",
-                "label": "Personal",
-                "palette": { "terrain": "#3a2f3a", "accent": "#b88ac9" },
-                "shape": { "base": "kit:groundPad", "scale": 1.0 },
-                "landmark": null,
-                "props": [
-                  { "kit": "tree", "position": [-1, 0, 0.5], "scale": 0.8, "paletteOverride": "#b88ac9" },
-                  { "kit": "rock", "position": [1, 0, 0.3], "scale": 0.5 },
-                  { "kit": "hill", "position": [0, 0, -1], "scale": 0.6, "paletteOverride": "#5a4a5a" }
-                ],
-                "sidebar": {
-                  "title": "Personal",
-                  "subtitle": "Outside of work",
-                  "timeline": [
-                    { "period": "Ongoing", "text": "Musical theatre, jiu-jitsu, ballet, rugby, snowboarding — a scattered but genuine set of interests picked up across every place lived." }
-                  ],
-                  "images": []
-                }
-              }
-            }
+          "content": {
+            "title": "New Zealand",
+            "subtitle": "Birth country",
+            "body": [
+              { "period": "Early childhood", "text": "Born here." },
+              { "period": "Primary school", "text": "Started school in New Zealand before the family's first move abroad." }
+            ]
           }
-        ]
-      }
+        },
+        {
+          "id": "uae",
+          "kind": "slot",
+          "label": "UAE",
+          "position": { "lat": 10, "lon": 110 },
+          "cameraTargetHeight": 0.5,
+          "cameraDistance": 6,
+          "skin": {
+            "palette": { "terrain": "#e0c583", "accent": "#f2e6c2" },
+            "shape": { "model": "models/geo/uae/uae.obj", "palette": "models/geo/uae/uae_palette.png", "scale": 1.5, "rotationY": 2 },
+            "landmark": null,
+            "props": []
+          },
+          "content": {
+            "title": "UAE",
+            "subtitle": "Two chapters, one home",
+            "body": [
+              { "period": "Ch. 1 — Abu Dhabi", "text": "Primary school. Snowboarding, of all things, in the middle of the desert." },
+              { "period": "Ch. 2 — Dubai", "text": "High school. Economics classes that stuck. Rugby. The New Zealand consulate, a small anchor to home." }
+            ]
+          }
+        },
+        {
+          "id": "india",
+          "kind": "slot",
+          "label": "India",
+          "position": { "lat": 15, "lon": 150 },
+          "cameraTargetHeight": 0.5,
+          "cameraDistance": 6,
+          "skin": {
+            "palette": { "terrain": "#c97a4a", "accent": "#e8b979" },
+            "shape": { "model": "models/geo/india/india.obj", "palette": "models/geo/india/india_palette.png", "scale": 1.5, "rotationY": 2 },
+            "landmark": null,
+            "props": []
+          },
+          "content": {
+            "title": "India",
+            "subtitle": "Middle school years",
+            "body": [
+              { "period": "Middle school", "text": "Musical theatre. Jiu-jitsu. Ballet — a strange and good combination." }
+            ]
+          }
+        },
+        {
+          "id": "australia",
+          "kind": "slot",
+          "label": "Australia",
+          "position": { "lat": 0, "lon": -90 },
+          "cameraTargetHeight": 0.5,
+          "cameraDistance": 6,
+          "skin": {
+            "palette": { "terrain": "#b06a3a", "accent": "#e8a868" },
+            "shape": { "model": "models/geo/australia/australia.obj", "palette": "models/geo/australia/australia_palette.png", "scale": 1.5, "rotationY": 5 },
+            "landmark": null,
+            "props": []
+          },
+          "content": {
+            "title": "Australia",
+            "subtitle": "University and career",
+            "body": [
+              { "period": "University of Sydney", "text": "Mathematics. Machine learning." },
+              { "period": "Career", "text": "Apple, Amazon, Deloitte." }
+            ]
+          }
+        }
+      ]
     },
     {
       "id": "about-me",
       "kind": "planet",
       "label": "About Me",
       "orbit": { "radius": 16, "phaseDeg": 55 },
-      "cameraDistance": 5,
-      "renderRecipe": { "type": "placeholder", "radius": 2.0, "palette": { "core": "#c9a8d9", "accent": "#e8d9f0" } },
+      "cameraDistance": 10,
+      "solarOrbit": { "radius": 17, "periodSec": 60 },
+      "renderRecipe": {
+        "type": "model",
+        "model": "models/geo/spaceship/spaceship.obj",
+        "palette": "models/geo/spaceship/spaceship_palette.png",
+        "scale": 3.0,
+        "attachments": [
+          {
+            "model": "models/geo/user/user.obj",
+            "palette": "models/geo/user/user_palette.png",
+            "scale": 0.15,
+            "rotationY": 95,
+            "position": { "x": 0.52, "y": 0.15, "z": -0.50 }
+          }
+        ]
+      },
       "contentTier": "panel",
       "content": {
         "title": "About Me",
         "subtitle": "Currently designing software at Apple",
-        "timeline": [
+        "body": [
           { "period": "Now", "text": "Shae McKenna. Placeholder content — real bio copy is a fast-follow once this planet has real art." },
           { "period": "Contact", "text": "Email is best: <a href=\"mailto:shaeantoine@gmail.com\">shaeantoine@gmail.com</a>. Also on <a href=\"https://linkedin.com/in/shaemckenna\">LinkedIn</a>." }
-        ],
-        "images": []
+        ]
       }
     },
     {
       "id": "cs",
       "kind": "planet",
       "label": "Computer Science",
-      "orbit": { "radius": 24, "phaseDeg": 140 },
-      "cameraDistance": 26,
+      "orbit": { "radius": 40, "phaseDeg": 120 },
+      "cameraDistance": 34,
       "renderRecipe": { "type": "grid", "radius": 10, "palette": { "core": "#1c2b2e", "accent": "#6ad1c4" } },
       "contentTier": "panel",
+      "landmarks": [
+        {
+          "id": "computer",
+          "kind": "satellite",
+          "label": "Systems & ML",
+          "model": "models/geo/computer/computer.obj",
+          "palette": "models/geo/computer/computer_palette.png",
+          "scale": 1.8,
+          "orbitRadius": 13,
+          "phaseDeg": 0,
+          "inclinationDeg": 8,
+          "orbitSpeed": 0.12,
+          "facingOffsetDeg": 180,
+          "accent": "#6ad1c4",
+          "content": {
+            "title": "Systems & ML Infrastructure",
+            "subtitle": "The machine behind the machine",
+            "body": [
+              { "text": "The layer between a trained model and something useful happening in the world — serving, tooling, and the systems programming that holds it together." }
+            ]
+          }
+        },
+        {
+          "id": "eeg",
+          "kind": "satellite",
+          "label": "Neurotech",
+          "model": "models/geo/eeg/eeg.obj",
+          "palette": "models/geo/eeg/eeg_palette.png",
+          "scale": 1.8,
+          "orbitRadius": 13,
+          "phaseDeg": 130,
+          "inclinationDeg": -12,
+          "orbitSpeed": 0.12,
+          "facingOffsetDeg": 180,
+          "accent": "#c46ad1",
+          "content": {
+            "title": "Neurotech",
+            "subtitle": "Signal into system",
+            "body": [
+              { "text": "Research-side curiosity in reading and interpreting brain signals — where machine learning meets hardware at its most direct." }
+            ]
+          }
+        },
+        {
+          "id": "phone",
+          "kind": "satellite",
+          "label": "Product Eng",
+          "model": "models/geo/phone/phone.obj",
+          "palette": "models/geo/phone/phone_palette.png",
+          "scale": 1.8,
+          "orbitRadius": 13,
+          "phaseDeg": 250,
+          "inclinationDeg": 18,
+          "orbitSpeed": 0.12,
+          "facingOffsetDeg": 180,
+          "accent": "#d1a86a",
+          "content": {
+            "title": "Product Engineering",
+            "subtitle": "Software people actually touch",
+            "body": [
+              { "text": "Apple: building the software layer people hold in their hands every day, on the other end of everything the grid below is doing." }
+            ]
+          }
+        }
+      ],
       "content": {
         "title": "Software Engineering",
         "subtitle": "Reinterpreting Tron's Grid",
-        "timeline": [
+        "body": [
           { "period": "Present", "text": "ML infrastructure and systems programming — the machinery between a trained model and something useful happening in the world." }
-        ],
-        "images": []
+        ]
       }
     },
     {
-      "id": "economics",
+      "id": "shrine",
       "kind": "planet",
-      "label": "Economics",
-      "orbit": { "radius": 32, "phaseDeg": 220 },
-      "cameraDistance": 6,
-      "renderRecipe": { "type": "placeholder", "radius": 2.2, "palette": { "core": "#3a3226", "accent": "#c9a866" } },
+      "label": "Shrine",
+      "orbit": { "radius": 40, "phaseDeg": 240 },
+      "cameraDistance": 34,
+      "renderRecipe": { "type": "coreReveal", "radius": 10, "palette": { "accent": "#c9a866" } },
       "contentTier": "panel",
       "content": {
-        "title": "Economics",
-        "subtitle": "Reinterpreting the MIT Economics Department",
-        "timeline": [
-          { "period": "First contact", "text": "Advanced economics classes in Dubai first pulled me toward the discipline." }
-        ],
-        "images": []
-      }
-    },
-    {
-      "id": "hobbies",
-      "kind": "planet",
-      "label": "Hobbies",
-      "orbit": { "radius": 48, "phaseDeg": 300 },
-      "cameraDistance": 5,
-      "renderRecipe": { "type": "placeholder", "radius": 1.8, "palette": { "core": "#3a2f3a", "accent": "#b88ac9" } },
-      "contentTier": "panel",
-      "content": {
-        "title": "Personal",
-        "subtitle": "Outside of work",
-        "timeline": [
-          { "period": "Ongoing", "text": "Musical theatre, jiu-jitsu, ballet, rugby, snowboarding — a scattered but genuine set of interests picked up across every place lived." }
-        ],
-        "images": []
-      }
+        "title": "Shrine",
+        "subtitle": "A loose orbit of borrowed inspiration",
+        "body": [
+          { "text": "Five lives with nothing in common except that they've stuck: a sailor, a mountaineer, a king, a queen, and a sound engineer, each kept in orbit for its own reason." }
+        ]
+      },
+      "landmarks": [
+        {
+          "id": "cup1983",
+          "kind": "core",
+          "label": "1983 America's Cup",
+          "model": "models/geo/sailboat/sailboat.obj",
+          "palette": "models/geo/sailboat/sailboat_palette.png",
+          "scale": 5.33,
+          "facingOffsetDeg": 90,
+          "accent": "#3f8fa0",
+          "content": {
+            "title": "1983 America's Cup",
+            "subtitle": "132 years, undone in one race",
+            "body": [
+              { "period": "1983", "text": "John Bertrand skippers Australia II to victory over Dennis Conner's Liberty, ending the New York Yacht Club's 132-year hold on the America's Cup — the longest winning streak in the history of organized sport." }
+            ]
+          }
+        },
+        {
+          "id": "fourteen-peaks",
+          "kind": "core",
+          "label": "14 Peaks",
+          "model": "models/geo/nirmal/nirmal.obj",
+          "palette": "models/geo/nirmal/nirmal_palette.png",
+          "scale": 5.33,
+          "facingOffsetDeg": -90,
+          "accent": "#9fb8c4",
+          "content": {
+            "title": "14 Peaks",
+            "subtitle": "Nothing is impossible",
+            "body": [
+              { "period": "2019", "text": "Nirmal Purja climbs all fourteen of the world's 8,000-metre peaks in six months and six days — a feat that had taken previous record-holders nearly eight years." }
+            ]
+          }
+        },
+        {
+          "id": "ashurbanipal",
+          "kind": "core",
+          "label": "Library of Nineveh",
+          "model": "models/geo/library/library.obj",
+          "palette": "models/geo/library/library_palette.png",
+          "scale": 5.33,
+          "accent": "#c08a4a",
+          "content": {
+            "title": "Library of Ashurbanipal",
+            "subtitle": "Thirty thousand tablets against forgetting",
+            "body": [
+              { "period": "7th century BC", "text": "King Ashurbanipal assembles the ancient world's first known library at Nineveh — tens of thousands of cuneiform tablets, among them the Epic of Gilgamesh, deliberately collected and catalogued rather than merely accumulated." }
+            ]
+          }
+        },
+        {
+          "id": "elissa",
+          "kind": "core",
+          "label": "Elissa of Carthage",
+          "model": "models/geo/elyssa/elyssa.obj",
+          "palette": "models/geo/elyssa/elyssa_palette.png",
+          "scale": 5.33,
+          "accent": "#7a3b8a",
+          "content": {
+            "title": "Elissa of Carthage",
+            "subtitle": "A city founded by someone who refused to stay put",
+            "body": [
+              { "period": "814 BC (traditional)", "text": "Fleeing Tyre after her brother seizes the throne, Elissa leads a fleet to the North African coast and founds Carthage — a Phoenician trading city that outgrows the empire she left behind." }
+            ]
+          }
+        },
+        {
+          "id": "csound",
+          "kind": "core",
+          "label": "Barry Vercoe",
+          "model": "models/geo/vercoe/vercoe.obj",
+          "palette": "models/geo/vercoe/vercoe_palette.png",
+          "scale": 5.33,
+          "accent": "#4fd1c5",
+          "content": {
+            "title": "Barry Vercoe",
+            "subtitle": "Teaching a computer to make sound",
+            "body": [
+              { "period": "1970s–80s", "text": "Vercoe builds Music 11 and later Csound at MIT, laying the groundwork for real-time digital sound synthesis — the software layer underneath most computer music made since." }
+            ]
+          }
+        }
+      ]
     }
   ]
 }
