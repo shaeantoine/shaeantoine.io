@@ -5,6 +5,9 @@ const validWork = {
     id: 'w1',
     title: 'Test',
     date: '2026-01-01',
+    previewImage: '/previews/test.svg',
+    blurb: 'A short test blurb.',
+    previewAspect: 'square',
     fragments: [{ targetId: 'a', text: 'hi' }],
     piece: { heading: 'Test', paragraphs: ['hi'] },
     connections: [{ workId: 'w2', sentence: 'because' }]
@@ -18,6 +21,11 @@ describe('validateWork', () => {
     it('throws when a required top-level field is missing', () => {
         const { title, ...missingTitle } = validWork;
         expect(() => validateWork(missingTitle)).toThrow(/missing required field "title"/);
+    });
+
+    it('throws when previewAspect is not a recognized value', () => {
+        const work = { ...validWork, previewAspect: 'huge' };
+        expect(() => validateWork(work)).toThrow(/invalid "previewAspect"/);
     });
 
     it('throws when a fragment is missing targetId or text', () => {
