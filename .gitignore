@@ -2,6 +2,9 @@
 # assembled by scripts/build.sh and never committed
 universe/node_modules
 
+# gallery/ dependencies (has its own .gitignore for node_modules/dist too)
+gallery/node_modules
+
 # assembled build output
 .build/
 
