@@ -3,15 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>On Making Things</title>
+    <title>Shae McKenna's Collection</title>
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
-    <canvas id="artwork-canvas"></canvas>
+    <div id="grid" class="grid" hidden></div>
+
+    <img id="tile-clone" class="tile-clone" hidden alt="" />
+
+    <canvas id="artwork-canvas" hidden></canvas>
 
     <div id="fragment" class="fragment" hidden></div>
 
-    <button id="enter-piece" class="enter-piece" type="button">Read the piece &rarr;</button>
+    <button id="close-work" class="close-work" type="button" hidden>&times;</button>
+
+    <button id="enter-piece" class="enter-piece" type="button" hidden>Read the piece &rarr;</button>
 
     <article id="piece" class="piece" hidden></article>
 
