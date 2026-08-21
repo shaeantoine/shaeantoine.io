@@ -13,6 +13,7 @@ const FADE_MS = 600;
 const DEFAULT_TITLE = 'Shae McKenna — The Collection';
 
 const gridEl = document.getElementById('grid');
+const headerEl = document.getElementById('site-header');
 const cloneEl = document.getElementById('tile-clone');
 const canvas = document.getElementById('artwork-canvas');
 const fragmentEl = document.getElementById('fragment');
@@ -53,6 +54,11 @@ function playTransform(fromTransform, toTransform, imageSrc) {
 }
 
 const IDENTITY_TRANSFORM = { scaleX: 1, scaleY: 1, translateX: 0, translateY: 0 };
+const HEADER_SCROLL_THRESHOLD_PX = 40;
+
+function onGridScroll() {
+    headerEl.classList.toggle('scrolled', gridEl.scrollTop > HEADER_SCROLL_THRESHOLD_PX);
+}
 
 function playStepIn({ rect, imageSrc }) {
     const from = computeExpandTransform(rect, { width: window.innerWidth, height: window.innerHeight });
@@ -91,12 +97,18 @@ function mountGrid() {
         }
     });
     gridEl.hidden = false;
+    headerEl.hidden = false;
+    onGridScroll();
+    gridEl.addEventListener('scroll', onGridScroll);
     currentView = 'grid';
 }
 
 function unmountGrid() {
+    gridEl.removeEventListener('scroll', onGridScroll);
     gridEl.hidden = true;
     gridEl.innerHTML = '';
+    headerEl.hidden = true;
+    headerEl.classList.remove('scrolled');
     currentView = null;
 }
 
