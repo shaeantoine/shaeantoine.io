@@ -10,9 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run"
   },
-  "dependencies": {
-    "three": "^0.169.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "vite": "^5.4.0",
     "vitest": "^2.1.0"
