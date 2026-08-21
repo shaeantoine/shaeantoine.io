@@ -1,212 +1,192 @@
-import { on } from './shared/EventBus.js';
-import { validateWork } from './content/schema.js';
 import { works } from './content/works/index.js';
-import { createFragmentState } from './state/fragmentState.js';
-import { renderPiece } from './ui/PieceView.js';
-import { renderGrid } from './grid/GridView.js';
+import { validateWork } from './content/schema.js';
+import { renderCanvas } from './canvas/CanvasView.js';
+import { renderModal } from './modal/ModalView.js';
+import { renderEditorial } from './editorial/EditorialView.js';
 import { computeExpandTransform } from './transitions/tileTransition.js';
 
-works.forEach(({ work }) => validateWork(work));
+works.forEach((work) => validateWork(work));
 
-const STEP_ANIMATION_MS = 420;
-const FADE_MS = 600;
-const DEFAULT_TITLE = 'Shae McKenna — The Collection';
+const MODAL_ANIMATION_MS = 350;
+const HEADER_SCROLL_THRESHOLD_PX = 40;
+const DEFAULT_TITLE = "Shae McKenna's Collection";
 
-const gridEl = document.getElementById('grid');
 const headerEl = document.getElementById('site-header');
-const cloneEl = document.getElementById('tile-clone');
-const canvas = document.getElementById('artwork-canvas');
-const fragmentEl = document.getElementById('fragment');
-const enterButton = document.getElementById('enter-piece');
-const pieceEl = document.getElementById('piece');
-const closeButton = document.getElementById('close-work');
+const canvasEl = document.getElementById('canvas');
+const loadingVeilEl = document.getElementById('loading-veil');
+const modalOverlayEl = document.getElementById('modal-overlay');
+const modalPanelEl = document.getElementById('modal-panel');
+const editorialEl = document.getElementById('editorial');
+const cursorRingEl = document.getElementById('cursor-ring');
 
-let currentView = null; // 'grid' | 'work' | null (nothing mounted yet)
-let currentWork = null; // { id, artwork, offInteract, enterPiece }
-let gridOrigin = null; // { workId, rect, imageSrc } — the tile a Work was entered from
-let pendingEnter = null; // { rect, imageSrc } captured synchronously on tile click
+let currentModalWorkId = null;
+let currentEditorialWorkId = null;
+let canvasMounted = false;
+let modalOrigin = null; // { rect } of the node a modal was opened from, for the origin-anchored transition
 
-function findEntry(id) {
-    return works.find(({ work }) => work.id === id);
+function findWork(id) {
+    return works.find((work) => work.id === id);
 }
 
 function parseHash() {
-    const match = window.location.hash.match(/^#\/work\/(.+)$/);
-    if (match && findEntry(match[1])) {
-        return { view: 'work', id: match[1] };
+    const readMatch = window.location.hash.match(/^#\/work\/(.+)\/read$/);
+    if (readMatch && findWork(readMatch[1])) {
+        return { view: 'editorial', id: readMatch[1] };
     }
-    return { view: 'grid' };
-}
-
-function playTransform(fromTransform, toTransform, imageSrc) {
-    cloneEl.src = imageSrc;
-    cloneEl.hidden = false;
-    const animation = cloneEl.animate(
-        [
-            { transform: `translate(${fromTransform.translateX}px, ${fromTransform.translateY}px) scale(${fromTransform.scaleX}, ${fromTransform.scaleY})` },
-            { transform: `translate(${toTransform.translateX}px, ${toTransform.translateY}px) scale(${toTransform.scaleX}, ${toTransform.scaleY})` }
-        ],
-        { duration: STEP_ANIMATION_MS, easing: 'ease-in-out' }
-    );
-    return animation.finished.then(() => {
-        cloneEl.hidden = true;
-    });
-}
-
-const IDENTITY_TRANSFORM = { scaleX: 1, scaleY: 1, translateX: 0, translateY: 0 };
-const HEADER_SCROLL_THRESHOLD_PX = 40;
-
-function onGridScroll() {
-    headerEl.classList.toggle('scrolled', gridEl.scrollTop > HEADER_SCROLL_THRESHOLD_PX);
-}
-
-function playStepIn({ rect, imageSrc }) {
-    const from = computeExpandTransform(rect, { width: window.innerWidth, height: window.innerHeight });
-    return playTransform(from, IDENTITY_TRANSFORM, imageSrc);
-}
-
-function playStepOut({ rect, imageSrc }) {
-    const to = computeExpandTransform(rect, { width: window.innerWidth, height: window.innerHeight });
-    return playTransform(IDENTITY_TRANSFORM, to, imageSrc);
-}
-
-/**
- * Fallback for leaving a Work when there's no grid-origin tile to shrink
- * back into (arrived via a direct connection jump, or a deep link/reload
- * straight into #/work/:id) — a simple opacity crossfade instead.
- */
-function fadeOutWork() {
-    const activeEl = pieceEl.hidden ? canvas : pieceEl;
-    if (activeEl === pieceEl) {
-        pieceEl.classList.remove('visible');
-    } else {
-        canvas.style.opacity = '0';
+    const modalMatch = window.location.hash.match(/^#\/work\/(.+)$/);
+    if (modalMatch && findWork(modalMatch[1])) {
+        return { view: 'modal', id: modalMatch[1] };
     }
-    return new Promise((resolve) => setTimeout(resolve, FADE_MS));
+    return { view: 'canvas' };
 }
 
-function mountGrid() {
-    renderGrid(gridEl, works.map(({ work }) => work), {
-        onEnter(id, tileEl) {
-            const img = tileEl.querySelector('.tile-preview');
-            pendingEnter = {
-                rect: (img ?? tileEl).getBoundingClientRect(),
-                imageSrc: img?.src ?? ''
-            };
+function onCanvasScroll() {
+    headerEl.classList.toggle('scrolled', canvasEl.scrollTop > HEADER_SCROLL_THRESHOLD_PX);
+}
+
+function mountCanvas() {
+    if (canvasMounted) return;
+    renderCanvas(canvasEl, works, {
+        onEnter(id, nodeEl) {
+            modalOrigin = { rect: nodeEl.getBoundingClientRect() };
             window.location.hash = `#/work/${id}`;
         }
     });
-    gridEl.hidden = false;
+    canvasEl.hidden = false;
     headerEl.hidden = false;
-    onGridScroll();
-    gridEl.addEventListener('scroll', onGridScroll);
-    currentView = 'grid';
+    onCanvasScroll();
+    canvasEl.addEventListener('scroll', onCanvasScroll);
+    canvasMounted = true;
 }
 
-function unmountGrid() {
-    gridEl.removeEventListener('scroll', onGridScroll);
-    gridEl.hidden = true;
-    gridEl.innerHTML = '';
+function unmountCanvas() {
+    if (!canvasMounted) return;
+    canvasEl.removeEventListener('scroll', onCanvasScroll);
+    canvasEl.hidden = true;
     headerEl.hidden = true;
     headerEl.classList.remove('scrolled');
-    currentView = null;
+    canvasMounted = false;
 }
 
-function mountWork(id) {
-    const entry = findEntry(id);
-    const work = entry.work;
-    const fragmentState = createFragmentState(work.fragments);
-    const artwork = new entry.Artwork(canvas);
+function applyModalOriginTransform(fromRect) {
+    if (!fromRect) return;
+    const panelRect = modalPanelEl.getBoundingClientRect();
+    const transform = computeExpandTransform(fromRect, { width: panelRect.width, height: panelRect.height });
+    modalPanelEl.style.transformOrigin = 'center center';
+    modalPanelEl.animate(
+        [
+            { transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scaleX}, ${transform.scaleY})`, opacity: 0.4 },
+            { transform: 'translate(0, 0) scale(1, 1)', opacity: 1 }
+        ],
+        { duration: MODAL_ANIMATION_MS, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    );
+}
 
-    const offInteract = on('artwork:interact', ({ targetId }) => {
-        const fragment = fragmentState.reveal(targetId);
-        if (!fragment) return;
-        fragmentEl.textContent = fragment.text;
-        fragmentEl.hidden = false;
+function openModal(id) {
+    const work = findWork(id);
+    modalOverlayEl.hidden = false;
+    modalPanelEl.hidden = false;
+    renderModal(modalPanelEl, work, {
+        onClose() {
+            window.location.hash = '#/';
+        }
     });
-
-    function enterPiece() {
-        artwork.setVisible(false);
-        canvas.hidden = true;
-        fragmentEl.hidden = true;
-        enterButton.hidden = true;
-        renderPiece(pieceEl, work);
-        pieceEl.hidden = false;
-        requestAnimationFrame(() => pieceEl.classList.add('visible'));
-    }
-
-    enterButton.addEventListener('click', enterPiece);
-    enterButton.hidden = false;
-    canvas.hidden = false;
-    canvas.style.opacity = '0';
     requestAnimationFrame(() => {
-        canvas.style.opacity = '1';
+        modalOverlayEl.classList.add('visible');
+        applyModalOriginTransform(modalOrigin?.rect ?? null);
     });
-    closeButton.hidden = false;
     document.title = work.title;
-
-    currentWork = { id, artwork, offInteract, enterPiece };
-    currentView = 'work';
+    currentModalWorkId = id;
 }
 
-function unmountWork() {
-    if (!currentWork) return;
-    currentWork.artwork.dispose();
-    currentWork.offInteract();
-    enterButton.removeEventListener('click', currentWork.enterPiece);
-    canvas.hidden = true;
-    fragmentEl.hidden = true;
-    enterButton.hidden = true;
-    closeButton.hidden = true;
-    pieceEl.hidden = true;
-    pieceEl.classList.remove('visible');
-    pieceEl.innerHTML = '';
+function closeModal() {
+    if (!currentModalWorkId) return;
+    modalOverlayEl.classList.remove('visible');
+    setTimeout(() => {
+        modalOverlayEl.hidden = true;
+        modalPanelEl.hidden = true;
+        modalPanelEl.innerHTML = '';
+    }, MODAL_ANIMATION_MS);
     document.title = DEFAULT_TITLE;
-    currentWork = null;
-    currentView = null;
+    currentModalWorkId = null;
+    modalOrigin = null;
 }
 
-async function applyRoute(route) {
-    if (route.view === 'work') {
-        const enteringFromGrid = currentView === 'grid' && pendingEnter;
-        const enter = pendingEnter;
-        pendingEnter = null;
+function mountEditorial(id) {
+    const work = findWork(id);
+    unmountCanvas();
+    renderEditorial(editorialEl, work, {
+        onClose() {
+            window.location.hash = '#/';
+        }
+    });
+    editorialEl.hidden = false;
+    document.title = work.title;
+    currentEditorialWorkId = id;
+}
 
-        if (enteringFromGrid) {
-            gridOrigin = { workId: route.id, rect: enter.rect, imageSrc: enter.imageSrc };
-            await playStepIn(enter);
-            unmountGrid();
-        } else if (currentView === 'work' && currentWork?.id !== route.id) {
-            gridOrigin = null;
-            unmountWork();
-        }
+function unmountEditorial() {
+    if (!currentEditorialWorkId) return;
+    editorialEl.hidden = true;
+    editorialEl.innerHTML = '';
+    document.title = DEFAULT_TITLE;
+    currentEditorialWorkId = null;
+}
 
-        if (!currentWork || currentWork.id !== route.id) {
-            mountWork(route.id);
+function applyRoute(route) {
+    if (route.view === 'editorial') {
+        if (currentModalWorkId) closeModal();
+        if (!currentEditorialWorkId || currentEditorialWorkId !== route.id) {
+            unmountEditorial();
+            mountEditorial(route.id);
         }
-    } else {
-        if (currentView === 'work') {
-            const origin = gridOrigin?.workId === currentWork?.id ? gridOrigin : null;
-            if (origin) {
-                await playStepOut(origin);
-            } else {
-                await fadeOutWork();
-            }
-            unmountWork();
-            gridOrigin = null;
-        }
-        if (currentView !== 'grid') {
-            mountGrid();
-        }
+        return;
     }
+
+    if (currentEditorialWorkId) {
+        unmountEditorial();
+        mountCanvas();
+    }
+
+    if (route.view === 'modal') {
+        mountCanvas();
+        if (!currentModalWorkId || currentModalWorkId !== route.id) {
+            if (currentModalWorkId) closeModal();
+            openModal(route.id);
+        }
+        return;
+    }
+
+    if (currentModalWorkId) closeModal();
+    mountCanvas();
 }
 
-closeButton.addEventListener('click', () => {
-    window.location.hash = '#/';
+function initCursorRing() {
+    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    if (isCoarsePointer) return;
+
+    cursorRingEl.hidden = false;
+    window.addEventListener('pointermove', (event) => {
+        cursorRingEl.style.left = `${event.clientX}px`;
+        cursorRingEl.style.top = `${event.clientY}px`;
+    });
+    document.addEventListener('pointerover', (event) => {
+        cursorRingEl.classList.toggle('expanded', Boolean(event.target.closest('a, button')));
+    });
+}
+
+modalOverlayEl.addEventListener('click', (event) => {
+    if (event.target === modalOverlayEl) window.location.hash = '#/';
 });
 
 window.addEventListener('hashchange', () => {
     applyRoute(parseHash());
 });
 
+initCursorRing();
 applyRoute(parseHash());
+
+requestAnimationFrame(() => {
+    loadingVeilEl.classList.add('fading');
+    setTimeout(() => { loadingVeilEl.hidden = true; }, 400);
+});

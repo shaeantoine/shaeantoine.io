@@ -8,9 +8,15 @@ const validWork = {
     previewImage: '/previews/test.svg',
     blurb: 'A short test blurb.',
     previewAspect: 'square',
-    fragments: [{ targetId: 'a', text: 'hi' }],
-    piece: { heading: 'Test', paragraphs: ['hi'] },
-    connections: [{ workId: 'w2', sentence: 'because' }]
+    connections: [{ workId: 'w2', sentence: 'because' }],
+    editorial: {
+        credit: 'Shae McKenna',
+        body: ['Paragraph one.'],
+        stat: null,
+        quote: null,
+        bio: null,
+        links: []
+    }
 };
 
 describe('validateWork', () => {
@@ -28,13 +34,39 @@ describe('validateWork', () => {
         expect(() => validateWork(work)).toThrow(/invalid "previewAspect"/);
     });
 
-    it('throws when a fragment is missing targetId or text', () => {
-        const work = { ...validWork, fragments: [{ targetId: 'a' }] };
-        expect(() => validateWork(work)).toThrow(/fragment missing/);
-    });
-
     it('throws when a connection is missing workId or sentence', () => {
         const work = { ...validWork, connections: [{ workId: 'w2' }] };
         expect(() => validateWork(work)).toThrow(/connection missing/);
+    });
+
+    it('throws when editorial.body is missing', () => {
+        const { body, ...editorialWithoutBody } = validWork.editorial;
+        const work = { ...validWork, editorial: editorialWithoutBody };
+        expect(() => validateWork(work)).toThrow(/editorial\.body/);
+    });
+
+    it('throws when editorial.credit is missing', () => {
+        const { credit, ...editorialWithoutCredit } = validWork.editorial;
+        const work = { ...validWork, editorial: editorialWithoutCredit };
+        expect(() => validateWork(work)).toThrow(/editorial\.credit/);
+    });
+
+    it('accepts editorial.stat, .quote, .bio as null and .links as an empty array', () => {
+        expect(() => validateWork(validWork)).not.toThrow();
+    });
+
+    it('throws when editorial.stat is present but missing value or label', () => {
+        const work = { ...validWork, editorial: { ...validWork.editorial, stat: { value: '12' } } };
+        expect(() => validateWork(work)).toThrow(/stat missing/);
+    });
+
+    it('throws when editorial.quote is present but missing text or attribution', () => {
+        const work = { ...validWork, editorial: { ...validWork.editorial, quote: { text: 'hi' } } };
+        expect(() => validateWork(work)).toThrow(/quote missing/);
+    });
+
+    it('throws when a link is missing label or href', () => {
+        const work = { ...validWork, editorial: { ...validWork.editorial, links: [{ label: 'Site' }] } };
+        expect(() => validateWork(work)).toThrow(/link missing/);
     });
 });

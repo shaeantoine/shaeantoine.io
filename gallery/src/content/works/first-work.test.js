@@ -7,8 +7,7 @@ describe('firstWork', () => {
         expect(() => validateWork(firstWork)).not.toThrow();
     });
 
-    it('has one fragment per artwork object (object-0 through object-4)', () => {
-        const targetIds = firstWork.fragments.map((f) => f.targetId);
-        expect(targetIds).toEqual(['object-0', 'object-1', 'object-2', 'object-3', 'object-4']);
+    it('has non-empty editorial body copy', () => {
+        expect(firstWork.editorial.body.length).toBeGreaterThan(0);
     });
 });

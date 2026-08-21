@@ -6,7 +6,7 @@
     <title>Shae McKenna's Collection</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;560;600&display=swap">
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -19,19 +19,19 @@
         </div>
     </header>
 
-    <div id="grid" class="grid" hidden></div>
+    <div id="cursor-ring" class="cursor-ring" hidden></div>
 
-    <img id="tile-clone" class="tile-clone" hidden alt="" />
+    <div id="canvas" class="canvas-viewport" hidden></div>
 
-    <canvas id="artwork-canvas" hidden></canvas>
+    <div id="loading-veil" class="loading-veil" hidden>
+        <span>Loading</span>
+    </div>
 
-    <div id="fragment" class="fragment" hidden></div>
+    <div id="modal-overlay" class="modal-overlay" hidden>
+        <div id="modal-panel" class="modal-panel" hidden></div>
+    </div>
 
-    <button id="close-work" class="close-work" type="button" hidden>&times;</button>
-
-    <button id="enter-piece" class="enter-piece" type="button" hidden>Read the piece &rarr;</button>
-
-    <article id="piece" class="piece" hidden></article>
+    <article id="editorial" class="editorial" hidden></article>
 
     <script type="module" src="./src/main.js"></script>
 </body>
