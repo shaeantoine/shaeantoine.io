@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shae McKenna's Desk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;560;600&display=swap">
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+    <header id="site-header" class="site-header" hidden>
+        <div class="site-header-inner">
+            <span class="site-header-name">Shae McKenna</span>
+            <nav class="site-header-nav">
+                <a class="nav-link nav-link-active" href="#/">Desk</a>
+            </nav>
+        </div>
+    </header>
+
+    <div id="cursor-ring" class="cursor-ring" hidden></div>
+
+    <canvas id="desk-canvas" class="desk-canvas" hidden></canvas>
+
+    <div id="desk-object-label" class="desk-object-label" hidden></div>
+
+    <div id="webgl-fallback" class="webgl-fallback" hidden>
+        <p>This experience needs a browser with WebGL support.</p>
+    </div>
+
+    <div id="loading-veil" class="loading-veil">
+        <span>Loading</span>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay" hidden>
+        <div id="modal-panel" class="modal-panel" hidden></div>
+    </div>
+
+    <article id="editorial" class="editorial" hidden></article>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
