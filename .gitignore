@@ -1,9 +1,13 @@
-# universe/ dependencies only; built output goes to gitignored .build/,
 # assembled by scripts/build.sh and never committed
-universe/node_modules
+node_modules/
 
-# gallery/ dependencies (has its own .gitignore for node_modules/dist too)
-gallery/node_modules
+# Unprocessed desk assets
+desk/art-src
+desk/models-src
+desk/textures-src
+
+# Desk projet .vite
+desk/.vite
 
 # assembled build output
 .build/

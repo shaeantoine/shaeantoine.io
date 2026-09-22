@@ -2,5 +2,5 @@ services:
   - type: web
     name: shaeantoine.io
     env: static
-    buildCommand: bash scripts/build.sh
-    staticPublishPath: .build
+    buildCommand: cd desk && npm ci && npm run build
+    staticPublishPath: desk/dist
