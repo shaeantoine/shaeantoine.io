@@ -53,8 +53,19 @@ export function invalidateShadows() {
  * @param {(options: { rebuildShadows: boolean }) => void} render
  *        Draws one frame. `rebuildShadows` is true when geometry has moved
  *        since the last rendered frame.
+ * @param {object} [options]
+ * @param {(intervalMs: number) => void} [options.onSustainedFrame]
+ *        Called with the raw interval since the previous frame, but ONLY when
+ *        that previous animation frame also rendered. That qualifier is the
+ *        entire value of the signal: this loop spends most of its life parked,
+ *        so the gap between one idle nudge and the next says nothing about how
+ *        fast the machine is, while the gap inside a continuous run — a dolly,
+ *        the mouse echo settling — is exactly the frame rate a visitor sees.
+ *        The interval is deliberately NOT clamped by MAX_DT_MS: a consumer
+ *        measuring slowness needs to see a slow frame at its real length.
+ *        @see scene/perfMonitor.js
  */
-export function createRenderScheduler(render) {
+export function createRenderScheduler(render, { onSustainedFrame } = {}) {
     const ticks = new Set();
 
     let rafId = null;
@@ -63,6 +74,10 @@ export function createRenderScheduler(render) {
     let dirty = true;
     let shadowsDirty = true;
     let lastTime = null;
+    // Whether the immediately preceding animation frame drew anything. Reset on
+    // every cold start so the first frame out of an idle gap — the expensive
+    // one, with caches cold — is never treated as part of a sustained run.
+    let renderedPreviousFrame = false;
 
     function ensureRunning() {
         if (disposed) return;
@@ -71,6 +86,7 @@ export function createRenderScheduler(render) {
         // mid-animation, quietly corrupting every damped approach in the app.
         if (idle) {
             lastTime = null;
+            renderedPreviousFrame = false;
             idle = false;
         }
         if (rafId === null) rafId = requestAnimationFrame(frame);
@@ -80,7 +96,8 @@ export function createRenderScheduler(render) {
         rafId = null;
         if (disposed) return;
 
-        const dt = lastTime === null ? ASSUMED_FIRST_DT_MS : Math.min(now - lastTime, MAX_DT_MS);
+        const elapsed = lastTime === null ? null : now - lastTime;
+        const dt = elapsed === null ? ASSUMED_FIRST_DT_MS : Math.min(elapsed, MAX_DT_MS);
         lastTime = now;
 
         // Copied before iterating: a tick is allowed to remove itself.
@@ -89,11 +106,17 @@ export function createRenderScheduler(render) {
             if (tick(dt) === true) wantsMore = true;
         }
 
-        if (dirty || wantsMore) {
+        const rendered = dirty || wantsMore;
+        if (rendered) {
             render({ rebuildShadows: shadowsDirty });
             dirty = false;
             shadowsDirty = false;
         }
+
+        // Reported after the draw is queued rather than before, so the interval
+        // being measured is one that already includes a full frame's work.
+        if (rendered && renderedPreviousFrame && elapsed !== null) onSustainedFrame?.(elapsed);
+        renderedPreviousFrame = rendered;
 
         // A tick may have re-armed the loop by calling invalidate(), in which
         // case rafId is already set and must not be double-scheduled.

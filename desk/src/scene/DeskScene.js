@@ -7,6 +7,9 @@ import { createRenderScheduler, invalidate, invalidateShadows } from './renderSc
 import { applyMaterialOverrides, logMaterialInventory } from './materialOverrides.js';
 import { activePreset } from './timeOfDay.js';
 import { buildPartsGroup } from './partMesh.js';
+import { createPointerSource } from '../cursor/pointerSource.js';
+import { createFrameStats, createQualityGovernor } from './perfMonitor.js';
+import { createPerfHud, perfHudRequested } from './perfHud.js';
 
 /**
  * The most pixels this scene will shade in one frame, whatever the display
@@ -19,6 +22,21 @@ import { buildPartsGroup } from './partMesh.js';
  * ~0.75 linear is the better of the two bad options.
  *
  * Deliberately NOT expressed as a maximum devicePixelRatio. See setSize.
+ *
+ * LOWERING THIS IS USUALLY THE WRONG INSTINCT, and it is worth writing down why,
+ * because it is the first knob anyone reaches for. A static cap cannot tell a
+ * slow machine from a large display; all it can do is trade sharpness for speed
+ * on every machine with a big screen, including the ones that were coping.
+ * Since the cap resamples the entire frame by a non-integer factor, the cost of
+ * being wrong is exactly the "slightly soft" failure the whole of `setSize`
+ * below is written to avoid — paid by a fast machine, for nothing.
+ *
+ * The measured path is strictly better and now exists: scene/perfMonitor.js
+ * watches real delivered frame intervals and scales quality only where frames
+ * are actually being missed, on the machine that is actually missing them. So
+ * this stays high enough that no current laptop trips it (a 16" MacBook Pro
+ * full-screen is 7.5 MP), and the governor handles the rest through
+ * `qualityRenderScale` below.
  */
 const MAX_DRAWING_BUFFER_PIXELS = 8.3e6;
 
@@ -236,6 +254,13 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
      */
     let drawingBufferHeight = 0;
 
+    /**
+     * The quality governor's multiplier on the drawing buffer, 1 until it has
+     * evidence this machine needs less. Read by `setSize`; written only by the
+     * tier change handler below.
+     */
+    let qualityRenderScale = 1;
+
     // Defends against a second live renderer ever being bound to the same
     // canvas — e.g. if a dev-server HMR replay re-runs this module without a
     // full page reload. main.js's own `deskScene` guard can't catch that,
@@ -374,6 +399,9 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    // The canvas's single pointer listener, shared with DeskCursor and
+    // IdleScreen through `instance.pointer`. @see cursor/pointerSource.js
+    const pointerSource = createPointerSource(canvasEl);
     const liftOffset = new THREE.Vector3();
     let hovered = null;
     // Groups currently sitting at their raised height, and the one being held
@@ -382,6 +410,42 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     let heldGroup = null;
 
     const renderPipeline = createRenderPipeline(renderer, scene, camera);
+
+    // -----------------------------------------------------------------------
+    // Measured quality
+    // -----------------------------------------------------------------------
+    // Nothing above this line knows how fast the machine it is running on is.
+    // This is the part that finds out, and the part that is allowed to spend
+    // image quality to fix it. @see scene/perfMonitor.js for the reasoning
+    // behind the budget, the window and the one-way ratchet.
+    const frameStats = createFrameStats();
+    const governor = createQualityGovernor({
+        onChange(tier) {
+            console.info(`[desk] Sustained frames over budget — dropping to quality tier "${tier.name}".`);
+            renderPipeline.setAoScale(tier.aoScale);
+            renderPipeline.setAmbientOcclusionEnabled(tier.ambientOcclusion);
+            if (tier.renderScale === qualityRenderScale) {
+                // AO changed but the buffer did not, so nothing reallocated the
+                // frame and nothing else is going to ask for the redraw that
+                // shows it.
+                invalidate();
+                return;
+            }
+            qualityRenderScale = tier.renderScale;
+            setSize(); // reallocates, and invalidates on its own way out
+        }
+    });
+
+    const bufferSize = new THREE.Vector2();
+    const perfHud = perfHudRequested()
+        ? createPerfHud({
+            renderer,
+            stats: frameStats,
+            governor,
+            pipeline: renderPipeline,
+            getBufferSize: () => renderer.getDrawingBufferSize(bufferSize)
+        })
+        : null;
 
     /**
      * The canvas's box in EXACT device pixels, when the browser will tell us.
@@ -441,6 +505,12 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         // targets, both of which survive to poison the first real frame.
         if (cssWidth === 0 || cssHeight === 0) return;
 
+        // The canvas's box is exactly what changed, and the pointer source
+        // caches it. Invalidated here rather than from its own resize listener
+        // so it is refreshed by the observer that sees the canvas itself, not
+        // just the window.
+        pointerSource.invalidateRect();
+
         const ratio = window.devicePixelRatio || 1;
         const exact = devicePixelBox(entries?.[0], ratio);
         let width = exact.width;
@@ -475,6 +545,15 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
             height = Math.round(height * scale);
         }
 
+        // The measured reduction, applied on top of the static one. Normally 1
+        // and therefore normally a no-op: it only leaves 1 when the governor
+        // has watched this machine miss the frame budget at every cheaper
+        // setting it had available. @see scene/perfMonitor.js
+        if (qualityRenderScale !== 1) {
+            width = Math.max(1, Math.round(width * qualityRenderScale));
+            height = Math.max(1, Math.round(height * qualityRenderScale));
+        }
+
         // Pixel ratio 1, deliberately: the device-pixel conversion has already
         // been done above, exactly, and handing three a ratio as well would
         // make it redo the same multiplication against the rounded CSS size —
@@ -493,6 +572,10 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         drawingBufferHeight = height;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        // Every render target was just reallocated, so the next several frames
+        // will pay for re-uploads that say nothing about this machine's steady
+        // state. Measuring them would be measuring the resize.
+        governor.reset();
         // Resizing reallocates the composer's targets, so the previous frame's
         // contents are gone; the shadow map is light-relative and survives.
         invalidate();
@@ -562,31 +645,43 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         if (previous) refreshLift(previous);
     }
 
-    function pickAtEvent(event) {
-        const rect = canvasEl.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    /**
+     * Hover picking, off the shared pointer stream.
+     *
+     * Takes normalised device coordinates rather than the event, because the
+     * conversion — and the layout read it used to require — now happens once
+     * per frame for every subscriber instead of once per listener per event.
+     * @see cursor/pointerSource.js
+     */
+    function pickAtNdc(ndc) {
+        pointer.set(ndc.x, ndc.y);
         raycaster.setFromCamera(pointer, camera);
         const hits = raycaster.intersectObjects(clickableGroups, false);
         return hits.length > 0 ? hits[0].object : null;
     }
 
-    function onPointerMove(event) {
+    function onPointerMove(ndc) {
         if (isFocusActive?.()) {
             // No hover state while zoomed in — but the focused object keeps
             // its raise, which holdLift owns rather than the pointer.
             setHovered(null);
             return;
         }
-        setHovered(pickAtEvent(event));
+        setHovered(pickAtNdc(ndc));
     }
 
+    /**
+     * Clicks are read straight off the event rather than from the coalesced
+     * stream: deferring a click to the next animation frame would mean the
+     * raycast ran against a camera that has since moved, and a click is a
+     * single decisive edge rather than a stream worth thinning.
+     */
     function onClick(event) {
-        const hitbox = pickAtEvent(event);
+        const hitbox = pickAtNdc(pointerSource.ndcForEvent(event));
         if (hitbox) onEnterFocus(hitbox.userData.deskObjectId);
     }
 
-    canvasEl.addEventListener('pointermove', onPointerMove);
+    const unsubscribePointerMove = pointerSource.onMove(onPointerMove);
     canvasEl.addEventListener('click', onClick);
 
     // Reading canvasEl.clientWidth/clientHeight the instant this module runs
@@ -617,7 +712,13 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     const scheduler = createRenderScheduler(({ rebuildShadows }) => {
         renderer.shadowMap.needsUpdate = rebuildShadows;
         renderPipeline.render();
+        perfHud?.update();
         if (afterRender.length) for (const resolve of afterRender.splice(0)) resolve();
+    }, {
+        onSustainedFrame(intervalMs) {
+            frameStats.record(intervalMs);
+            governor.record(intervalMs);
+        }
     });
 
     /**
@@ -712,9 +813,11 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
 
     function dispose() {
         scheduler.dispose();
-        canvasEl.removeEventListener('pointermove', onPointerMove);
+        unsubscribePointerMove();
+        pointerSource.dispose();
         canvasEl.removeEventListener('click', onClick);
         resizeObserver.disconnect();
+        perfHud?.dispose();
         renderPipeline.dispose();
         environmentTexture.dispose();
         renderer.dispose();
@@ -725,6 +828,9 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         renderer,
         scene,
         camera,
+        /** The canvas's one pointer listener, for DeskCursor and IdleScreen to
+         *  subscribe to rather than adding their own. @see cursor/pointerSource.js */
+        pointer: pointerSource,
         /** The GPU's real maximum, read once. Threaded into focus strategies so
          *  a page or a card built outside this module filters as well as the
          *  room's own surfaces do. */

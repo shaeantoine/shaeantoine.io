@@ -259,3 +259,95 @@ describe('module-level invalidate', () => {
         expect(render).not.toHaveBeenCalled();
     });
 });
+
+/**
+ * The frame-rate signal the quality governor reads.
+ *
+ * What makes it meaningful is the frames it *refuses* to report: a scene that
+ * renders on demand spends most of its life parked, so the gap between one idle
+ * nudge and the next describes how long the visitor sat still, not how fast
+ * their machine is. @see scene/perfMonitor.js
+ */
+describe('createRenderScheduler sustained-frame reporting', () => {
+    let clock;
+    let render;
+    let onSustainedFrame;
+    let scheduler;
+
+    beforeEach(() => {
+        clock = installFrameClock();
+        render = vi.fn();
+        onSustainedFrame = vi.fn();
+        scheduler = createRenderScheduler(render, { onSustainedFrame });
+    });
+
+    afterEach(() => {
+        scheduler.dispose();
+        vi.unstubAllGlobals();
+    });
+
+    it('reports nothing for the very first frame, which has no interval behind it', () => {
+        clock.step();
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(onSustainedFrame).not.toHaveBeenCalled();
+    });
+
+    it('reports the interval between two back-to-back rendered frames', () => {
+        scheduler.addTick(() => true); // hold the loop open
+        clock.step(16);
+        clock.step(16);
+        expect(onSustainedFrame).toHaveBeenCalledWith(16);
+    });
+
+    it('reports a slow frame at its true length rather than the clamped delta', () => {
+        // dt handed to ticks is clamped to 100 ms so damped motion cannot
+        // teleport; the perf signal must not be, or every slow frame would be
+        // reported as merely the clamp.
+        scheduler.addTick(() => true);
+        clock.step(16);
+        clock.step(180);
+        expect(onSustainedFrame).toHaveBeenCalledWith(180);
+    });
+
+    it('does not report across an idle gap, where the interval is the visitor pausing', () => {
+        clock.step(); // mount frame renders, then the loop parks
+        onSustainedFrame.mockClear();
+
+        invalidate();
+        clock.step(5000);
+        // This frame rendered, but the one before it was thousands of
+        // milliseconds earlier and the loop was asleep in between.
+        expect(onSustainedFrame).not.toHaveBeenCalled();
+    });
+
+    it('does not report a frame whose predecessor rendered nothing', () => {
+        // A tick that asks for frames without dirtying anything still runs the
+        // loop; only frames that actually drew are comparable.
+        let wantsFrames = true;
+        scheduler.addTick(() => wantsFrames);
+        clock.step(16);
+        onSustainedFrame.mockClear();
+
+        wantsFrames = false;
+        clock.step(16); // ticks run, nothing renders
+        clock.step(16);
+        expect(onSustainedFrame).not.toHaveBeenCalled();
+    });
+
+    it('reports every interval through a sustained run', () => {
+        scheduler.addTick(() => true);
+        for (let i = 0; i < 5; i += 1) clock.step(16);
+        // Five frames, four intervals between them.
+        expect(onSustainedFrame).toHaveBeenCalledTimes(4);
+    });
+
+    it('is optional — a scheduler without the callback behaves exactly as before', () => {
+        const bare = createRenderScheduler(render);
+        expect(() => {
+            clock.step(16);
+            clock.step(16);
+        }).not.toThrow();
+        bare.dispose();
+    });
+});
+

@@ -325,10 +325,13 @@ export function createIdleScreen({ deskScene, canvasEl, objectId, anchor, works 
         syncBlink();
     }
 
-    canvasEl.addEventListener('pointermove', onPointerMove);
-    canvasEl.addEventListener('pointerleave', onPointerLeave);
+    // Through the scene's shared pointer stream rather than a third listener on
+    // the same canvas. This one only needs the edges — pointer present, pointer
+    // gone — so it ignores the coordinates it is handed.
+    // @see cursor/pointerSource.js
+    const unsubscribeMove = deskScene.pointer.onMove(onPointerMove);
+    const unsubscribeLeave = deskScene.pointer.onLeave(onPointerLeave);
     document.addEventListener('visibilitychange', onVisibilityChange);
-
     /**
      * Hidden only while focus is on this same object, where screenStrategy
      * mounts its own canvas at this exact anchor. Focusing anything else on the
@@ -373,8 +376,8 @@ export function createIdleScreen({ deskScene, canvasEl, objectId, anchor, works 
         disposed = true; // also tells an in-flight glow import not to land
         clearInterval(timer);
         timer = null;
-        canvasEl.removeEventListener('pointermove', onPointerMove);
-        canvasEl.removeEventListener('pointerleave', onPointerLeave);
+        unsubscribeMove();
+        unsubscribeLeave();
         document.removeEventListener('visibilitychange', onVisibilityChange);
         group.remove(mesh);
         mesh.geometry.dispose();

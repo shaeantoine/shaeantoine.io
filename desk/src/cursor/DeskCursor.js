@@ -133,10 +133,15 @@ export function createDeskCursor({ deskScene, canvasEl }) {
     // Both of these change a target the update tick damps toward, and either
     // can arrive while the render loop is parked. Waking it is what turns a
     // settled mouse back into a moving one.
-    function onPointerMove(event) {
-        const rect = canvasEl.getBoundingClientRect();
-        echoNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        echoNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    //
+    // The coordinates arrive already normalised and already thinned to one
+    // delivery per animation frame — this used to do its own
+    // `getBoundingClientRect` per pointer event, which was a forced layout at
+    // the mouse's report rate rather than the screen's.
+    // @see cursor/pointerSource.js
+    function onPointerMove(ndc) {
+        echoNdc.x = ndc.x;
+        echoNdc.y = ndc.y;
         hasPointer = true;
         invalidate();
     }
@@ -146,8 +151,8 @@ export function createDeskCursor({ deskScene, canvasEl }) {
         invalidate();
     }
 
-    canvasEl.addEventListener('pointermove', onPointerMove);
-    canvasEl.addEventListener('pointerleave', onPointerLeave);
+    const unsubscribeMove = deskScene.pointer.onMove(onPointerMove);
+    const unsubscribeLeave = deskScene.pointer.onLeave(onPointerLeave);
 
     /** The one cursor change the desk makes: the standard hand over a hit. */
     function setHover(objectId) {
@@ -164,8 +169,8 @@ export function createDeskCursor({ deskScene, canvasEl }) {
     }
 
     function dispose() {
-        canvasEl.removeEventListener('pointermove', onPointerMove);
-        canvasEl.removeEventListener('pointerleave', onPointerLeave);
+        unsubscribeMove();
+        unsubscribeLeave();
         setHover(null);
         if (canvasEl.__deskCursor === instance) canvasEl.__deskCursor = null;
     }

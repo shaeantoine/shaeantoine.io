@@ -99,14 +99,6 @@ function parseHash() {
     return { view: 'desk' };
 }
 
-function computeNdc(event, canvasEl) {
-    const rect = canvasEl.getBoundingClientRect();
-    return {
-        x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        y: -((event.clientY - rect.top) / rect.height) * 2 + 1
-    };
-}
-
 function focusVisualFor(objectId) {
     return deskObjects.find((object) => object.id === objectId)?.focus?.visual;
 }
@@ -133,7 +125,9 @@ function hasSpreadContent(objectId) {
  */
 function onCanvasClick(event) {
     if (!focusController?.isActive()) return;
-    const ndc = computeNdc(event, deskCanvasEl);
+    // Through the scene's pointer source so this shares its cached canvas box
+    // rather than forcing a layout of its own. @see cursor/pointerSource.js
+    const ndc = deskScene.pointer.ndcForEvent(event);
     const outcome = focusController.resolveCanvasClick(ndc.x, ndc.y);
     if (!outcome) return;
     event.stopPropagation();
@@ -489,18 +483,29 @@ const MIN_VEIL_MS = 500;
 const VEIL_FADE_MS = 700;
 
 /**
- * The longest the veil will wait on any one step of the opening sequence.
+ * The longest the loading veil may stay up, counted from the module running.
  *
- * THE FAILURE THIS EXISTS FOR. Everything the sequence waits on is meant to be
- * unable to fail — the preload counts errors as progress, the font wait races
- * its own timeout, a model that 404s settles like any other. What is left is
- * the frame itself: `whenDrawn` resolves from inside the render callback, so a
- * renderer that throws, or a context lost between mounting and the first frame,
- * resolves nothing. There is no recovery from that here, but there is a
- * difference between a visitor seeing a broken scene and a visitor seeing a
- * loading screen that never ends, and only one of the two can be reported.
+ * THIS IS A WALL-CLOCK BOUND ON THE WHOLE SEQUENCE, and it replaces a per-step
+ * timeout that could not provide one. Each step used to race its own 8-second
+ * limit, which bounds each step and therefore bounds nothing: two of them in
+ * series is sixteen seconds. Worse, the longest step of all — fetching the
+ * ~6.7 MB of models and textures the room is built from — was not raced at all,
+ * because every individual request in it was written to be unable to fail. It
+ * cannot fail; it can take a very long time. On a connection at 1.6 Mbps that
+ * is upwards of half a minute of progress bar, and the honest description of
+ * what the visitor was promised in that case is "nothing".
+ *
+ * Ten seconds is past the point where waiting longer is the better trade. The
+ * room degrades well: the caches are keyed by promise (see loaders/gltf.js and
+ * loaders/texture.js), so abandoning the *wait* does not abandon the *fetch* —
+ * every request still in flight lands later on the path it would have taken
+ * anyway, attaching its model or filling in its texture and asking for a frame.
+ * What the visitor gets at ten seconds is the room as far as it has got,
+ * finishing itself in front of them. That is a worse first impression than the
+ * one this sequence is designed to give, and a far better one than a progress
+ * bar with no end.
  */
-const STEP_TIMEOUT_MS = 8000;
+const OPENING_BUDGET_MS = 10000;
 
 const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -514,10 +519,22 @@ function setLoadProgress(fraction) {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const orTimeout = (promise, label) => Promise.race([
-    promise,
-    wait(STEP_TIMEOUT_MS).then(() => console.warn(`[desk] Gave up waiting on ${label}; opening anyway.`))
-]);
+/**
+ * Waits on `promise`, but never past the opening deadline.
+ *
+ * Every step shares one deadline rather than holding its own timer, which is
+ * what makes the total bounded: a step that runs long eats into what the steps
+ * after it are allowed, instead of extending the sequence. A step that starts
+ * with nothing left gives up immediately, which is correct — by then the veil
+ * is already overdue.
+ */
+function untilDeadline(promise, label, deadline) {
+    const remaining = Math.max(0, deadline - performance.now());
+    return Promise.race([
+        promise,
+        wait(remaining).then(() => console.warn(`[desk] Opening budget spent while waiting on ${label}; showing the room as far as it got.`))
+    ]);
+}
 
 /**
  * Uncovers the room.
@@ -562,12 +579,20 @@ function revealDesk({ animateCamera }) {
  */
 async function start() {
     const openedAt = performance.now();
+    const deadline = openedAt + OPENING_BUDGET_MS;
     let route = { view: 'desk' };
     setLoadProgress(0);
 
     try {
+        // Only the asset fetch is bounded here; `ensureCanvasFonts` already
+        // races a timeout of its own and resolves false rather than hanging,
+        // and the one canvas that outlives the gap repaints itself below.
         const [, fontsReady] = await Promise.all([
-            preloadDeskAssets(deskObjects, { onProgress: setLoadProgress }),
+            untilDeadline(
+                preloadDeskAssets(deskObjects, { onProgress: setLoadProgress }),
+                'the room’s models and textures',
+                deadline
+            ),
             ensureCanvasFonts()
         ]);
 
@@ -575,11 +600,11 @@ async function start() {
         if (!fontsReady) onCanvasFontsSettled(() => idleScreen?.repaint());
 
         window.addEventListener('hashchange', () => applyRoute(parseHash()));
-        await orTimeout(deskScene.whenReady(), 'the desk objects');
+        await untilDeadline(deskScene.whenReady(), 'the desk objects', deadline);
 
         route = parseHash();
         applyRoute(route);
-        await orTimeout(deskScene.whenDrawn(), 'the first frame');
+        await untilDeadline(deskScene.whenDrawn(), 'the first frame', deadline);
     } catch (error) {
         console.error('[desk] The opening sequence failed; showing the room as far as it got.', error);
     } finally {
