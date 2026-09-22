@@ -28,6 +28,7 @@ describe('buildPartMesh', () => {
         expect(Array.isArray(mesh.material)).toBe(false);
         expect(mesh.material.map).toBeFalsy();
     });
+
 });
 
 describe('buildPartsGroup', () => {
@@ -38,9 +39,9 @@ describe('buildPartsGroup', () => {
     });
 
     it('collects the posed parts into one child group, in order', () => {
-        // The lanyard's card, holder and clip stand up while its strap stays on
-        // the desk. One subgroup is how "some of the parts" is expressed as a
-        // single transform for artifactStrategy to animate.
+        // Some of an object's parts turn while the rest stay put. One subgroup
+        // is how "some of the parts" is expressed as a single transform for a
+        // focus strategy to animate.
         const group = buildPartsGroup([
             box({ color: '#strap1' }),
             box({ color: '#card', pose: POSE_GROUP_NAME }),

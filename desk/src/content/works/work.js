@@ -8,13 +8,18 @@ on it that you stop noticing after the first week and then keep in a drawer
 forever. That is the honest object for this category, and it is also the one
 that refuses to be a trophy: nobody's ID badge looks impressive.
 
-Each entry carries its own strap, which is not redundancy — artifactStrategy
-reparents the whole resting group into the first project's slot, so a shared
-strap would walk off the desk the first time you pressed an arrow. Every
-lanyard having its own lanyard is both simpler and literally true. Each also
-takes its own `seed`, which is what makes the six straps fall differently: one
-coil repeated six times reads as an asset placed six times, which is the same
-rule the two shelf plants are held to.
+Each entry carries its own holder and clip, which is not redundancy —
+artifactStrategy reparents the whole resting group into the first project's
+slot, so hardware shared between the cards would walk off the desk the first
+time you pressed an arrow. Six identical clips is also just what six badges
+look like: the card is what differs between jobs, and the clip is the same
+part from the same supplier every time.
+
+THE ENTRIES USED TO CARRY A `seed` as well, which varied how each one's lanyard
+strap fell — one coil repeated six times would have read as an asset placed six
+times, the rule the two shelf plants are held to. The straps are gone (they ran
+across the editorial column; see content/lanyard.js) and with them the only
+thing on this object that had any reason to vary.
 
 `access` and `year` are card furniture, and they earn their place on the two
 Apple entries in particular — same employer, same header band, and without a
@@ -37,7 +42,7 @@ export const appleEngineer = {
     blurb: 'Building the retrieval layer under an AI tool 150,000 people did not ask for.',
     previewAspect: 'wide',
     category: 'work',
-    artifact: buildLanyard({ org: 'Apple', role: 'Software Engineer', cardColor: '#e9e6e0', strapColor: '#2f3136', access: 'EMPLOYEE', year: '2025', seed: 1 }),
+    artifact: buildLanyard({ org: 'Apple', role: 'Software Engineer', cardColor: '#e9e6e0', strapColor: '#2f3136', access: 'EMPLOYEE', year: '2025' }),
     connections: [
         {
             workId: 'software-apple-knowledge-rag',
@@ -69,7 +74,7 @@ export const appleIntern = {
     blurb: 'Nobody asked for it. That turned out to be the hard part and the whole point.',
     previewAspect: 'square',
     category: 'work',
-    artifact: buildLanyard({ org: 'Apple', role: 'SWE Intern', cardColor: '#dedbd4', strapColor: '#4a4e57', access: 'INTERN', year: '2023', seed: 5 }),
+    artifact: buildLanyard({ org: 'Apple', role: 'SWE Intern', cardColor: '#dedbd4', strapColor: '#4a4e57', access: 'INTERN', year: '2023' }),
     connections: [
         {
             workId: 'work-apple-engineer',
@@ -104,7 +109,7 @@ export const deloitte = {
     blurb: 'Synthetic credit data is an ethics problem wearing a technical costume.',
     previewAspect: 'wide',
     category: 'work',
-    artifact: buildLanyard({ org: 'Deloitte', role: 'Quant Analyst', cardColor: '#dfe3d9', strapColor: '#2c3a2b', access: 'INTERN', year: '2023', seed: 4 }),
+    artifact: buildLanyard({ org: 'Deloitte', role: 'Quant Analyst', cardColor: '#dfe3d9', strapColor: '#2c3a2b', access: 'INTERN', year: '2023' }),
     connections: [
         {
             workId: 'work-apple-engineer',
@@ -135,7 +140,7 @@ export const amazon = {
     blurb: 'My first real job, and the least technical thing I have ever done.',
     previewAspect: 'square',
     category: 'work',
-    artifact: buildLanyard({ org: 'Amazon', role: 'Growth Intern', cardColor: '#e8ded0', strapColor: '#3c332a', access: 'INTERN', year: '2022', seed: 6 }),
+    artifact: buildLanyard({ org: 'Amazon', role: 'Growth Intern', cardColor: '#e8ded0', strapColor: '#3c332a', access: 'INTERN', year: '2022' }),
     connections: [
         {
             workId: 'work-deloitte',
@@ -165,7 +170,7 @@ export const inspireTomorrow = {
     blurb: 'I got the scholarships. Then I built the thing that helps other people find theirs.',
     previewAspect: 'tall',
     category: 'work',
-    artifact: buildLanyard({ org: 'Inspire Tomorrow', role: 'CTO', cardColor: '#d9e0e6', strapColor: '#233240', access: 'STAFF', year: '2024', seed: 2 }),
+    artifact: buildLanyard({ org: 'Inspire Tomorrow', role: 'CTO', cardColor: '#d9e0e6', strapColor: '#233240', access: 'STAFF', year: '2024' }),
     connections: [
         {
             workId: 'academia-medical-education',
@@ -200,7 +205,7 @@ export const nextGen = {
     blurb: 'Two of a hundred worked. I am still not sure I was right for the right reasons.',
     previewAspect: 'wide',
     category: 'work',
-    artifact: buildLanyard({ org: 'NextGen Ventures', role: 'Investment Principal', cardColor: '#e4dcd2', strapColor: '#443a4e', access: 'STAFF', year: '2024', seed: 3 }),
+    artifact: buildLanyard({ org: 'NextGen Ventures', role: 'Investment Principal', cardColor: '#e4dcd2', strapColor: '#443a4e', access: 'STAFF', year: '2024' }),
     connections: [
         {
             workId: 'software-hackathons',

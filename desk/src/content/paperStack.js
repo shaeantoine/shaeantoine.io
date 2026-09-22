@@ -47,17 +47,20 @@ const TOP_SQUARENESS = 0.18;
 const PAPER_COLOR = '#f7f5f0';
 
 /**
- * Every part of this object tips up when it is focused, and that is the whole
- * of the difference from the lanyard.
+ * Every part of this object tips up when it is focused.
  *
  * scene/partMesh.js collects the parts tagged this way into one child group and
- * focus/pose.js rotates that group about `anchor.present.pivot` — the badge
- * stands up on the end of a strap that stays lying on the desk, so only some of
- * its parts carry the tag. A clipped sheaf has no such part. The clip is what
- * makes the run rigid, the sheets are what it is clipping, and the focused
- * pages hang inside the same group (see focus/strategies/sheetStrategy.js's
- * `stage`), so tipping any subset of it would come apart in the hand. Tagging
- * everything is therefore not laziness here; it is the object.
+ * focus/pose.js rotates that group about `anchor.present.pivot`. Tagging all of
+ * them is not laziness: the clip is what makes the run rigid, the sheets are
+ * what it is clipping, and the focused pages hang inside the same group (see
+ * focus/strategies/sheetStrategy.js's `stage`), so tipping any subset of it
+ * would come apart in the hand.
+ *
+ * The badge tags everything too, for its own reason — the clip it stands on is
+ * part of the assembly. The partial pose the group mechanism was built for had
+ * exactly one user, the badge's old lanyard strap, and that is gone; the
+ * mechanism stays because it costs nothing and the next posed object may want
+ * it.
  */
 const LIFTS = 'lift';
 

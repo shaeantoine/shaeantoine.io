@@ -53,6 +53,13 @@ const ARROW_CHROME_VISUALS = ['screen', 'artifact'];
 // Visuals whose text is the editorial spread set beside the object.
 const SPREAD_CONTENT_VISUALS = ['artifact'];
 
+// How far the stepping arrows stand off the object's screen-space box, and
+// off the editorial column when they have to be pushed clear of it. Widened
+// from 24: at that spacing an arrow sitting between the column and the object
+// touched both, and the pair read as one crowded strip rather than as a
+// control with a margin.
+const ARROW_GAP = 32;
+
 // The object whose resting state is a lit screen. Derived from the layout
 // rather than named, so renaming the display — or moving the screen visual onto
 // some other object — can't leave a dangling id here pointing at nothing.
@@ -163,12 +170,56 @@ function updateFocusChromePosition() {
     focusPanelEl.style.top = `${rect.top}px`;
 }
 
+/**
+ * Pushes an arrow out of the editorial spread's column when the two would
+ * otherwise land on top of each other.
+ *
+ * The arrows are pinned to the object's screen-space box and the column is
+ * pinned to the viewport, so nothing in either placement knows about the
+ * other — and on a step where the object projects wide, the trailing arrow
+ * ends up over the text, under it in the stack, and unreadable from both
+ * sides. (Raising its z-index only turns an invisible control into one
+ * sitting on a paragraph.)
+ *
+ * Measured off the live element rather than off the 42% in the stylesheet:
+ * the column's max-width, the narrow-window layout that moves it to the
+ * bottom of the frame, and the root font size all move that edge, and a
+ * hardcoded fraction would be wrong in each case. The vertical test is what
+ * keeps the narrow layout honest — down there the column is below the object,
+ * not beside it, and an arrow that cleared it horizontally would be shoved
+ * off the frame for nothing.
+ *
+ * @param {number} centreX where the arrow wants to be, as a viewport x
+ * @param {number} centreY its vertical centre, already decided
+ * @param {DOMRect|null} spread the column's box, or null when it isn't shown
+ * @param {number} radius half the arrow's own width
+ */
+function clearOfSpread(centreX, centreY, spread, radius) {
+    if (!spread) return centreX;
+
+    const clearsVertically = centreY - radius >= spread.bottom || centreY + radius <= spread.top;
+    const clearsHorizontally = centreX - radius >= spread.right || centreX + radius <= spread.left;
+    if (clearsVertically || clearsHorizontally) return centreX;
+
+    // Out the side the arrow was already nearest, which for the shot these
+    // objects are framed in is always away from the column: the spread sits in
+    // the left of the frame and the object is aimed into the right of it.
+    return centreX > (spread.left + spread.right) / 2
+        ? spread.right + radius + ARROW_GAP
+        : spread.left - radius - ARROW_GAP;
+}
+
 function updateScreenArrowsPosition() {
     const rect = screenRectFor(focusController.currentSnapshot().objectId);
     const centerY = rect.top + rect.height / 2;
-    screenArrowPrevEl.style.left = `${rect.left - 24}px`;
+    // Read before anything is written, so the two style writes below don't
+    // each force their own layout to satisfy this measurement.
+    const spread = artifactSpreadEl.hidden ? null : artifactSpreadEl.getBoundingClientRect();
+    const radius = screenArrowPrevEl.offsetWidth / 2;
+
+    screenArrowPrevEl.style.left = `${clearOfSpread(rect.left - ARROW_GAP, centerY, spread, radius)}px`;
     screenArrowPrevEl.style.top = `${centerY}px`;
-    screenArrowNextEl.style.left = `${rect.left + rect.width + 24}px`;
+    screenArrowNextEl.style.left = `${clearOfSpread(rect.left + rect.width + ARROW_GAP, centerY, spread, radius)}px`;
     screenArrowNextEl.style.top = `${centerY}px`;
 }
 
@@ -191,16 +242,21 @@ function revealFocusChrome() {
     const arrows = hasArrowChrome(objectId);
     const spread = hasSpreadContent(objectId);
 
+    // THE SPREAD IS UNHIDDEN FIRST, and the order is load-bearing:
+    // updateScreenArrowsPosition measures the column to keep the arrows out of
+    // it, and a `display: none` element measures as a zero box at the origin.
+    // Placed the other way round, the arrows would arrive over the text and
+    // only jump clear on the next frame that moved them.
+    if (spread) {
+        renderCurrentSpread();
+        artifactSpreadEl.hidden = false;
+        artifactScrimEl.hidden = false;
+    }
     if (arrows) {
         updateScreenArrowsState();
         screenArrowPrevEl.hidden = false;
         screenArrowNextEl.hidden = false;
         updateScreenArrowsPosition();
-    }
-    if (spread) {
-        renderCurrentSpread();
-        artifactSpreadEl.hidden = false;
-        artifactScrimEl.hidden = false;
     }
     // A frame later, so the elements are laid out and the opacity transition
     // has a start value to run from — out of `display: none` it would not.

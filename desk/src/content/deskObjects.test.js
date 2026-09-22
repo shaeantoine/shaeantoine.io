@@ -752,9 +752,9 @@ describe('the desktop props', () => {
      * THE YAW HAS TO BE APPLIED AND IT IS EASY TO FORGET. Every one of these
      * objects is turned a little on the desk, and a group rotation spins the
      * footprint about the group's ORIGIN — not about the footprint's own
-     * centre, which for the lanyard is nowhere near it, since the coil extends
-     * backwards and the card does not. Taking the local box and simply adding
-     * `position` would put the lanyard's bounds somewhere it isn't. So the four
+     * centre — which for the paper stack is nowhere near it, since the sheaf is
+     * offset from the clip it hangs off. Taking the local box and simply adding
+     * `position` would put a prop's bounds somewhere it isn't. So the four
      * corners are rotated individually and re-bounded, which is exact.
      *
      * Three.js yaws about +Y, mapping (x, z) to (x·cos + z·sin, -x·sin + z·cos).
@@ -1021,13 +1021,14 @@ describe('the lanyard', () => {
         }
     });
 
-    it('gives every badge its own strap', () => {
-        // artifactStrategy reparents the resting group into slot 0 on mount,
-        // so a strap shared between cards would leave the desk the first time
-        // an arrow was pressed and never come back.
+    it('gives every badge its own holder and clip', () => {
+        // artifactStrategy reparents the resting group into slot 0 on mount, so
+        // hardware shared between cards would leave the desk the first time an
+        // arrow was pressed and never come back. Six identical clips is not
+        // duplication to be factored out — it is six badges.
         for (const job of jobs) {
-            const straps = job.artifact.parts.filter((part) => !part.badge);
-            expect(straps.length).toBeGreaterThan(0);
+            const hardware = job.artifact.parts.filter((part) => !part.badge);
+            expect(hardware.length).toBeGreaterThan(0);
         }
     });
 
@@ -1068,23 +1069,26 @@ describe('the lanyard', () => {
         expect(lowest).toBeLessThan(0.005);
     });
 
-    it('hinges where the strap starts, so the two stay connected', () => {
-        // The badge is propped on its own clip, and the tape runs on from the
-        // same point. A hinge anywhere else and the strap visibly detaches from
-        // the ring the moment the card moves.
+    it('hinges on the front of the clip, which is what it stands on', () => {
+        // A rigid rotation sends everything in FRONT of the pivot downward, so
+        // the hinge has to be at the outermost point of the lifted assembly or
+        // the part beyond it goes through the desktop. Every part lifts on this
+        // object, so that point is the front of the whole badge.
+        //
+        // Taken from the geometry rather than compared against a literal: the
+        // pivot is authored as BADGE_FRONT precisely so it cannot drift when
+        // the clip is resized, and this is what proves the export still
+        // describes the front of the thing it is named for.
         const { present } = lanyard.focus.anchor;
-        // The tape is a walk: each segment is centred half its own length along
-        // its heading from where the last one ended, so the first one's tail is
-        // the point the whole strap hangs off. A box's long axis is its local
-        // +x and the builder yaws it to heading - PI/2, hence the quarter turn
-        // back out of it here.
-        const first = lanyard.parts.find((part) => !part.pose);
-        const heading = first.rotation[1] + Math.PI / 2;
-        const tailZ = first.position[2] - Math.cos(heading) * (first.args[0] / 2);
-        const tailX = first.position[0] - Math.sin(heading) * (first.args[0] / 2);
+        const front = Math.max(...lanyard.parts.map((part) => {
+            const depth = part.type === 'cylinder' ? part.args[0] : part.args[2] / 2;
+            // The card is the one part turned on its side; its printed height
+            // is what reaches in z, not its thickness.
+            return part.position[2] + (part.badge ? part.args[1] / 2 : depth);
+        }));
 
-        expect(tailZ).toBeCloseTo(present.pivot[2], 3);
-        expect(tailX).toBeCloseTo(present.pivot[0], 3);
+        expect(present.pivot[2]).toBeCloseTo(front, 6);
+        expect(present.pivot[0]).toBe(0);
     });
 
     it('tips the card up far enough to read without standing it to attention', () => {
@@ -1195,10 +1199,10 @@ describe('the paper stack', () => {
     });
 
     it('tips the whole sheaf up, not some of it', () => {
-        // The lanyard tags only the badge so the strap stays lying on the desk;
-        // a clipped run of paper has no part that can stay behind, and an
-        // untagged sheet would be left flat on the desk while the eight above it
-        // stood up. Checked on the tag rather than on the render because that is
+        // The badge tags everything, because the clip is what the card stands
+        // ON; a clipped run of paper has no part that can stay behind either,
+        // and an untagged sheet would be left flat on the desk while the eight
+        // above it stood up. Checked on the tag rather than on the render — that is
         // where it would go wrong — adding a part to content/paperStack.js and
         // forgetting the `pose` is a one-line, silent omission.
         expect(stack.parts.every((part) => part.pose === 'lift')).toBe(true);
@@ -1575,7 +1579,7 @@ describe('the focus cameras', () => {
     it('centres what it frames, unless an editorial spread needs the room', () => {
         // The objects that carry their own words — the screen and the sheets —
         // are read in the middle of the frame. The two that are described by the
-        // DOM spread beside them (see .artifact-spread, which ends at 48% of
+        // DOM spread beside them (see .artifact-spread, which ends at 42% of
         // the viewport) have to leave that column clear, so they sit in the
         // right half instead.
         //

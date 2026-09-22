@@ -14,7 +14,7 @@ import { POSE_GROUP_NAME } from '../scene/partMesh.js';
  *
  * TWO OBJECTS USE IT AND THEY TIP DIFFERENT AMOUNTS OF THEMSELVES, which is why
  * this lives here rather than inside either strategy. The lanyard stands its
- * badge up 66° and leaves the strap on the desk (focus/strategies/artifactStrategy.js);
+ * badge up 66° on its own clip (focus/strategies/artifactStrategy.js);
  * the paper stack tips the whole clipped sheaf to a 40° reading slope, pages
  * included, because a clipped run of paper has no part that stays behind
  * (focus/strategies/sheetStrategy.js). Same rotation, same pivot arithmetic,

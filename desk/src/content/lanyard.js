@@ -1,50 +1,54 @@
 /**
- * One lanyard: an ID card in a holder, lying face-up on the desk with its
- * strap sprawling away from the clip.
+ * One badge: an ID card in a holder with a bulldog clip on its near edge,
+ * lying face-up on the desk.
  *
  * WHY THIS IS A FUNCTION AND NOT A PILE OF LITERALS. Two callers need
  * byte-identical output. The desk object (content/deskObjects.js) rests as the
- * first job's lanyard, and that same job's `artifact` is what artifactStrategy
+ * first job's badge, and that same job's `artifact` is what artifactStrategy
  * shows when you focus it — validateDeskLayout enforces that they match,
  * because if they ever diverge the object would visibly change the instant you
  * clicked it while appearing to do nothing. Generating both from one call makes
  * that impossible to get wrong rather than merely tested for.
  *
- * WHY EVERY BADGE CARRIES ITS OWN STRAP. artifactStrategy reparents the whole
- * resting group into the first project's slot on mount, so anything shared —
- * a single strap the cards swap on top of — would walk off the desk the first
- * time an arrow was pressed. It is also just true: every lanyard has a lanyard.
+ * WHY EVERY BADGE CARRIES ITS OWN HARDWARE. artifactStrategy reparents the
+ * whole resting group into the first project's slot on mount, so anything
+ * shared — one clip the cards swap underneath — would walk off the desk the
+ * first time an arrow was pressed.
  *
- * WHAT CHANGED, AND WHY. The first version of this was a card and three flat
- * rectangles standing in for a strap. It had no volume anywhere: nothing in it
- * could catch the window, so from the establishing shot it read as a pale smear
- * and from the focus camera it read as a printed sticker. It now has the three
- * things that make a badge a badge —
+ * IT USED TO HAVE A LANYARD STRAP, and losing it was a composition decision
+ * rather than a modelling one. The tape sprawled to the viewer's left, and once
+ * the editorial column moved to that side of the frame (see style.css
+ * .artifact-spread) the strap ran the full width of the shot underneath the
+ * prose: measured, the object spanned from 8.5% of the viewport at 16:9 and
+ * 0.8% at 3:2, against a card that only ever occupied 66–75%. A clip badge is
+ * the same object with none of that — it ends where the card ends.
+ *
+ * WHAT MAKES IT READ AS A BADGE, given it is six primitives:
  *
  *   a HOLDER, whose rim is the only reason the card looks like it is *in*
  *   something rather than printed on the desk;
- *   a SLOT AND A SWIVEL CLIP, which is the piece of hardware, and the one
- *   surface here that returns a hard specular;
- *   a STRAP THAT TWISTS, because woven tape lying on a desk is never flat, and
- *   segments that share one normal read as a painted line no matter how they
- *   are arranged.
+ *   a PUNCHED SLOT, which is what says the holder is meant to be hung off
+ *   something;
+ *   a CLIP with two jaws, a hinge barrel and a turned-up lip — the piece of
+ *   hardware, and the one surface here that returns a hard specular. The lip
+ *   is what makes it a bulldog clip rather than a metal tab: it is the part
+ *   you press, so it is the part that says the thing opens.
  *
  * THE CLIP IS AT THE NEAR EDGE, WHICH IS A FOCUS DECISION. Focusing the object
  * tips the card up on its near edge so its face meets the camera (see
  * `anchor.present` in content/deskObjects.js). Whatever the card pivots on has
- * to be the thing holding it, or the clip and the strap part company the
- * instant it moves — so the slot, the swivel and the ring all sit on that edge
- * and the strap runs away from the viewer's side. A badge dropped with its
- * lanyard sprawling toward you is also just what a badge on a desk looks like.
+ * to be the thing holding it, so the slot, the swivel and the clip all sit on
+ * that edge — and the card ends up propped on its own clip, which is both
+ * correct and a better image than a card standing on nothing.
  *
  * DIMENSIONS ARE REAL. A CR80 badge is 54 x 86 mm and surfaces.js puts the
  * scene at 3.2 units per metre, so the card is 0.173 x 0.275 before its
- * holder. The values below are that card in a sleeve. A lanyard strap is
- * ~20 mm, hence 0.064.
+ * holder. The values below are that card in a sleeve. A bulldog badge clip is
+ * ~10 mm across the jaw, hence 0.032.
  */
 
 const CARD_WIDTH = 0.19;
-const CARD_HEIGHT = 0.30;
+export const CARD_HEIGHT = 0.30;
 const CARD_THICKNESS = 0.008;
 
 const SLEEVE_MARGIN = 0.008; // how far the holder stands out past the card
@@ -55,11 +59,23 @@ const SLEEVE_DEPTH = CARD_HEIGHT + SLEEVE_MARGIN * 1.5;
 const SLOT_WIDTH = 0.026; // the punched hole the clip threads through
 const SLOT_DEPTH = 0.026;
 
-const RING_RADIUS = 0.014;
-const RING_TUBE = 0.0035;
+// The clip, jaw-first. Authored flat, with the thickness already in y, so
+// nothing here needs the card's quarter turn.
+const CLIP_WIDTH = 0.032;
+const JAW_THICKNESS = 0.0035;
+const HINGE_RADIUS = 0.005;
+const UPPER_JAW_DEPTH = 0.036;
+const LOWER_JAW_DEPTH = 0.032;
+const LIP_DEPTH = 0.0035;
+const LIP_HEIGHT = HINGE_RADIUS * 1.6;
 
-const STRAP_WIDTH = 0.064;
-const STRAP_THICKNESS = 0.006;
+// The jaws sit on the hinge barrel rather than at heights of their own: the
+// lower one on the desk, the upper one high enough on the barrel to leave the
+// closed gap between them visible from the side. The lip stands UP off the
+// upper jaw, away from the other jaw, which is the direction that makes it a
+// thing you press rather than a second jaw.
+const UPPER_JAW_Y = HINGE_RADIUS * 1.9;
+const LIP_Y = UPPER_JAW_Y - JAW_THICKNESS / 2 + LIP_HEIGHT / 2;
 
 /**
  * THE CARD LIES FLAT BY ROTATION, NOT BY CHOOSING A DIFFERENT FACE.
@@ -76,61 +92,52 @@ const STRAP_THICKNESS = 0.006;
 const CARD_ROTATION = [-Math.PI / 2, 0, 0];
 
 // Where the hardware sits, in z, working forward from the card's near edge.
+// Every one of these is the previous piece's front edge plus its own half
+// depth, so the assembly is a chain rather than five independently chosen
+// numbers — nudging the slot carries the whole clip forward with it, which is
+// what physically happens.
 const SLEEVE_FRONT = SLEEVE_DEPTH / 2;
 const SLOT_Z = SLEEVE_FRONT + SLOT_DEPTH / 2;
 const SWIVEL_Z = SLOT_Z + 0.016;
-const RING_Z = SWIVEL_Z + RING_RADIUS + 0.004;
+const HINGE_Z = SWIVEL_Z + 0.015 + HINGE_RADIUS;
+const UPPER_JAW_Z = HINGE_Z + UPPER_JAW_DEPTH / 2;
+const LOWER_JAW_Z = HINGE_Z + LOWER_JAW_DEPTH / 2;
+const LIP_Z = UPPER_JAW_Z + UPPER_JAW_DEPTH / 2 + LIP_DEPTH / 2;
 
 /**
- * The strap, as a walk.
+ * The front of the whole assembly, which two other files need by name.
  *
- * Twelve short segments following a wandering path rather than three sticks in
- * a fan. The heading swings on a sine so the tape curls back on itself the way
- * dropped webbing does, and each segment takes a small ROLL about its own long
- * axis — which is the part that matters. Rolling gives neighbouring segments
- * different normals, so the window lights them unequally and the run reads as
- * fabric with a twist in it. Without it, twelve co-planar strips are one strip.
- *
- * The numbers are the ones that keep it on the desk in front of the card: at
- * these settings the walk stays inside LANYARD_FOOTPRINT, which the tests
- * check part by part. Lengthening the segments or slackening the swing is what
- * pushes it off the front edge.
+ * It is the point the badge is propped on when it stands up — content's
+ * `anchor.present.pivot` is this, because a pivot anywhere behind it swings
+ * whatever is in front of it down through the desktop — and it is the front of
+ * LANYARD_FOOTPRINT, which is what the desk's spacing chain is measured
+ * against.
  */
-const STRAP_SEGMENTS = 12;
-const SEGMENT_LENGTH = 0.046;
-const HEADING_BIAS = -1.5; // radians off the +z axis, toward the viewer's left
-const HEADING_SWING = 1.3;
-const HEADING_TURNS = 2.2;
-const HEADING_PHASE = 1.5;
-const MAX_ROLL = 0.34;
-
-/** Mulberry32 — the same small deterministic PRNG content/bookRow.js uses. */
-function createRandom(seed) {
-    let state = seed >>> 0;
-    return function random() {
-        state = (state + 0x6d2b79f5) >>> 0;
-        let t = state;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
+export const BADGE_FRONT = LIP_Z + LIP_DEPTH / 2;
 
 /**
  * The whole object's footprint on the desk, as [minX, maxX] x [minZ, maxZ]
  * from the group origin, before the group's own yaw.
  *
- * Written out rather than derived so the layout tests have something to check
- * the geometry *against* — a bound computed from the same numbers it is
- * bounding would agree with itself no matter how wrong both were.
- * lanyard.test.js walks every part and asserts containment, and also asserts
- * this is not padded far past what it bounds.
+ * DERIVED NOW, WHERE IT USED TO BE WRITTEN OUT. The old strap wandered on a
+ * seeded walk, so no expression described where it ended up and the four
+ * numbers had to be measured and typed in — with a test walking every part of
+ * every seed to catch them drifting apart. What is left is four rigid pieces
+ * in a fixed chain, and for that a literal would be strictly worse: it could
+ * go stale silently the moment a jaw got longer. The containment test stays,
+ * because it is now checking the chain rather than a transcription.
+ *
+ * The badge is SYMMETRIC IN X, which the old footprint was very much not —
+ * the strap sprawled 0.36 to the left against 0.12 to the right. That is the
+ * change the desk position downstream had to be re-derived for.
  */
 export const LANYARD_FOOTPRINT = {
-    minX: -0.36,
-    maxX: 0.12,
-    minZ: -CARD_HEIGHT / 2 - SLEEVE_MARGIN,
-    maxZ: 0.39
+    minX: -SLEEVE_WIDTH / 2,
+    maxX: SLEEVE_WIDTH / 2,
+    // The holder's back edge, not the card's — the sleeve is the deeper of
+    // the two and this used to be written out as a value 2 mm behind it.
+    minZ: -SLEEVE_DEPTH / 2,
+    maxZ: BADGE_FRONT
 };
 
 /**
@@ -152,17 +159,20 @@ const LIFTS = 'lift';
  *   strapColor: string,
  *   accent?: string,
  *   access?: string,
- *   year?: string,
- *   seed?: number
+ *   year?: string
  * }} config
  *        `access` and `year` are printed on the card (see scene/badgeCanvas.js)
- *        and omitting them simply leaves those lines off. `seed` varies the
- *        strap's fall between jobs — six identically-coiled straps would read
- *        as one asset placed six times.
+ *        and omitting them simply leaves those lines off.
+ *
+ *        THERE IS NO `seed` ANY MORE. It varied the old strap's fall, because
+ *        six identically-coiled straps would have read as one asset placed six
+ *        times. Six identical clips do not have that problem — they read as
+ *        six badges from six employers, which is what they are, and a clip
+ *        that fell differently per job would be the odd thing.
  * @returns {{ parts: object[] }} an `artifact` for a Work, and equally the
  *          `parts` of a desk object — the two shapes are the same on purpose.
  */
-export function buildLanyard({ org, role, cardColor, strapColor, accent, access, year, seed = 1 }) {
+export function buildLanyard({ org, role, cardColor, strapColor, accent, access, year }) {
     const parts = [
         // The holder, under the card and standing a few millimetres proud of
         // it on every side. Rigid PVC rather than the soft wallet kind: low
@@ -206,9 +216,16 @@ export function buildLanyard({ org, role, cardColor, strapColor, accent, access,
             material: { roughness: 0.38, metalness: 0, envMapIntensity: 1.15 },
             pose: LIFTS
         },
-        // The swivel, sitting in the slot, and the split ring in front of it.
-        // Nickel: metalness 1 and a low roughness, which on this desk of paper
-        // and cloth is the only surface that returns a hard highlight.
+        // THE HARDWARE, and the one metal on this part of the desk. Nickel:
+        // metalness 1 and a low roughness, which against paper, card and cloth
+        // is the only surface here that returns a hard highlight — and is most
+        // of why the clip reads as a separate object rather than as more of
+        // the holder.
+        //
+        // The swivel first, sitting in the slot. On a real badge this is the
+        // vinyl tab the clip is riveted to; at this size it is a tab, and its
+        // job is to put a join between the card and the clip so the two do not
+        // read as one moulding.
         {
             type: 'box',
             args: [0.016, 0.006, 0.030],
@@ -218,60 +235,56 @@ export function buildLanyard({ org, role, cardColor, strapColor, accent, access,
             material: { roughness: 0.22, metalness: 1, envMapIntensity: 1.4 },
             pose: LIFTS
         },
+        // The hinge barrel the two jaws close on. A cylinder is modelled about
+        // its own +y, so a quarter turn about Z lays it across the badge — and
+        // it is the only round thing on the object, which is what stops the
+        // clip reading as a stack of three flat plates.
         {
-            type: 'torus',
-            args: [RING_RADIUS, RING_TUBE, 8, 18],
-            // A torus is modelled in the XY plane, so the same quarter turn the
-            // card takes lays the ring flat on the desk.
-            position: [0, RING_TUBE, RING_Z],
-            rotation: [-Math.PI / 2, 0, 0],
+            type: 'cylinder',
+            args: [HINGE_RADIUS, HINGE_RADIUS, CLIP_WIDTH, 14],
+            position: [0, HINGE_RADIUS, HINGE_Z],
+            rotation: [0, 0, Math.PI / 2],
+            color: '#b9bcc1',
+            material: { roughness: 0.22, metalness: 1, envMapIntensity: 1.4 },
+            pose: LIFTS
+        },
+        // The jaws, closed. The lower one is shorter and all but buried while
+        // the badge lies flat — it earns its place when the card stands up and
+        // the clip is seen edge-on, which is the shot the whole object is
+        // posed for. One plate there would be a tab; two with a gap is a clip.
+        {
+            type: 'box',
+            args: [CLIP_WIDTH, JAW_THICKNESS, UPPER_JAW_DEPTH],
+            position: [0, UPPER_JAW_Y, UPPER_JAW_Z],
+            rotation: [0, 0, 0],
+            color: '#b9bcc1',
+            material: { roughness: 0.22, metalness: 1, envMapIntensity: 1.4 },
+            pose: LIFTS
+        },
+        {
+            type: 'box',
+            args: [CLIP_WIDTH, JAW_THICKNESS, LOWER_JAW_DEPTH],
+            position: [0, JAW_THICKNESS / 2, LOWER_JAW_Z],
+            rotation: [0, 0, 0],
+            color: '#b9bcc1',
+            material: { roughness: 0.22, metalness: 1, envMapIntensity: 1.4 },
+            pose: LIFTS
+        },
+        // The turned-up lip on the upper jaw, which is the part of a bulldog
+        // clip you press. It is 3.5 mm of metal and it is doing more work than
+        // its size suggests: it is the only feature that says the clip OPENS,
+        // and it is the front of the whole object, so it is also what the
+        // badge is propped on when it stands up. @see BADGE_FRONT.
+        {
+            type: 'box',
+            args: [CLIP_WIDTH, LIP_HEIGHT, LIP_DEPTH],
+            position: [0, LIP_Y, LIP_Z],
+            rotation: [0, 0, 0],
             color: '#b9bcc1',
             material: { roughness: 0.22, metalness: 1, envMapIntensity: 1.4 },
             pose: LIFTS
         }
     ];
-
-    const random = createRandom(seed);
-    let x = 0;
-    let z = RING_Z + RING_RADIUS + RING_TUBE;
-
-    for (let i = 0; i < STRAP_SEGMENTS; i++) {
-        const t = i / (STRAP_SEGMENTS - 1);
-        const heading =
-            HEADING_BIAS +
-            HEADING_SWING * Math.sin(t * Math.PI * HEADING_TURNS + HEADING_PHASE) +
-            (random() - 0.5) * 0.16;
-        const roll = (random() * 2 - 1) * MAX_ROLL;
-        // A box's long axis is its local +x; a yaw of h - π/2 points that axis
-        // along the heading, measured from +z.
-        const yaw = heading - Math.PI / 2;
-
-        const dx = Math.sin(heading) * SEGMENT_LENGTH;
-        const dz = Math.cos(heading) * SEGMENT_LENGTH;
-
-        // THE ROLL TIPS THE SEGMENT, SO IT HAS TO BE LIFTED OFF THE DESK BY
-        // EXACTLY WHAT IT DROPS. Composed as XYZ, the roll is applied about the
-        // world X axis rather than the segment's own, which tilts the ends and
-        // the long edges by these two terms. Left at a flat thickness/2 the low
-        // corner sinks through the desktop, and a strap half-buried in the desk
-        // is a far worse artefact than one lying a millimetre high.
-        const endDrop = Math.abs(Math.sin(yaw) * Math.sin(roll)) * (SEGMENT_LENGTH / 2);
-        const edgeDrop = Math.abs(Math.cos(yaw) * Math.sin(roll)) * (STRAP_WIDTH / 2);
-
-        parts.push({
-            type: 'box',
-            args: [SEGMENT_LENGTH, STRAP_THICKNESS, STRAP_WIDTH],
-            position: [x + dx / 2, STRAP_THICKNESS / 2 + endDrop + edgeDrop, z + dz / 2],
-            rotation: [roll, yaw, 0],
-            color: strapColor,
-            // Woven polyester. Nearly fully rough and barely picking the room
-            // up, which is what keeps the strap from reading as plastic.
-            material: { roughness: 0.92, metalness: 0, envMapIntensity: 0.7 }
-        });
-
-        x += dx;
-        z += dz;
-    }
 
     return { parts };
 }

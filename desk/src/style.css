@@ -515,7 +515,7 @@ p.editorial-body {
    
    This is also what settles a fight the spread was losing. The focus vignette
    darkens everything past 40% of the frame's radius, and the column sits from
-   5% to 48% across — so near-black ink was being set on a backdrop the
+   5% to at most 42% across — so near-black ink was being set on a backdrop the
    vignette was busy pushing toward near-black too, over the high-frequency
    detail of the rest of the desk. Committing to the dark and inverting the
    type turns that from a problem into the thing that makes it legible.
@@ -556,9 +556,15 @@ p.editorial-body {
     z-index: 65;
     top: 50%;
     left: 5vw;
-    right: 52%;
+    /* 58 AND 27rem ARE THE SAME DECISION MADE FOR TWO WINDOW SIZES. Above
+       about 1200px the max-width binds and the percentage does nothing; below
+       it the percentage binds and the max-width does nothing. At 52% / 30rem
+       the column ran to 48% of a 1100px window, which put it within 3% of the
+       object and left the prev arrow nowhere to stand. Both were pulled in by
+       the same amount so the gap does not depend on how wide the window is. */
+    right: 58%;
+    max-width: 27rem;
     transform: translateY(-50%);
-    max-width: 30rem;
     max-height: 74vh;
     overflow-y: auto;
     opacity: 0;

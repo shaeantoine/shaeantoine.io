@@ -2,6 +2,7 @@ import { CATEGORY_LABELS } from './schema.js';
 import { buildBookRow } from './bookRow.js';
 import { BOOKS } from './books.js';
 import { buildPaperStack, paperStackHeight, paperStackFootprint } from './paperStack.js';
+import { BADGE_FRONT } from './lanyard.js';
 import { workExperience } from './works/work.js';
 import { academia } from './works/academia.js';
 
@@ -233,16 +234,25 @@ export const deskObjects = [
             // about 22° off true screen-right here, which is close enough for
             // a slide — an object leaving along it recedes slightly as it goes.
             //
-            // THE AIM IS DELIBERATELY NOT THE OBJECT. It sits 0.58 to the
+            // THE AIM IS DELIBERATELY NOT THE OBJECT. It sits 0.75 to the
             // object's screen-LEFT, which swings the station into the right
             // half of the frame and leaves the left clear for the editorial
-            // spread (see style.css .artifact-spread, which ends at 48% of
+            // spread (see style.css .artifact-spread, which ends at 42% of
             // the viewport). Derived rather than guessed: screen-right in world
             // terms is normalize(cross(-view, up)) ≈ (0.976, 0, -0.216) for
             // this view vector, and the pair below puts the object's bounding
-            // box inside x ∈ [0.02, 0.78] of the frame at 16:9 and
-            // [0.02, 0.92] on a 3:2 window — clear of the text column at
+            // box inside x ∈ [0.04, 0.78] of the frame at 16:9 and
+            // [0.05, 0.92] on a 3:2 window — clear of the text column at
             // both, with the tighter aspect the binding one.
+            //
+            // 0.58 WAS TOO LITTLE, and the reason it looked sufficient on paper
+            // is that the figure written here was stale. It claimed the box
+            // started at x = 0.02; measured, it started at -0.03, i.e. the
+            // station still crossed the centre line and left the column and the
+            // prev arrow fighting over the same 3% of frame. 0.75 is as far
+            // right as the object goes before the 3:2 window clips it — the
+            // limit is `keeps the whole face inside the frame` in
+            // deskObjects.test.js, which allows 0.95 and this lands at 0.92.
             //
             // THE SHIFT USED TO GO THE OTHER WAY, with the column on the right.
             // It was mirrored because of what sat behind the words rather than
@@ -250,7 +260,7 @@ export const deskObjects = [
             // flank, so pushing it left filled the right of the frame with the
             // display and the keyboard, and the spread was being read over
             // them. Pushing it right puts the bare left edge of the desk under
-            // the column instead. The magnitude is unchanged; only the sign is.
+            // the column instead.
             //
             // AND THE AIM IS THE OBJECT'S MIDDLE, which is y = 0.237.
             //
@@ -271,14 +281,14 @@ export const deskObjects = [
             // is transform-aware now and the reported box is the one attachModel
             // actually builds.
             visual: 'artifact',
-            camera: { offset: [1.006, 1.423, 1.865], lookAtOffset: [-0.566, 0.237, 0.125] },
+            camera: { offset: [1.006, 1.423, 1.865], lookAtOffset: [-0.732, 0.237, 0.162] },
             anchor: { position: [0, 0, 0], travel: [0.45, 0, 0.02] }
         }
     },
 
-    // THE JOBS, as a lanyard with the badge lying face-up on the desk.
+    // THE JOBS, as a clip-on ID badge lying face-up on the desk.
     //
-    // WHY A LANYARD. Every other clickable object here is the thing that was
+    // WHY A BADGE. Every other clickable object here is the thing that was
     // made — a screen, a page, a board. A job doesn't produce an object; it
     // produces a laminated card you stop noticing in week one and then keep
     // forever. That is the honest prop, and it is also the one that cannot
@@ -290,26 +300,34 @@ export const deskObjects = [
     // a mismatch would make the object visibly change the instant it was
     // clicked while appearing to do nothing at all. See content/lanyard.js.
     //
-    // THE STRAP RUNS TOWARD THE VIEWER, which is what decides this object's z.
-    // The clip is on the card's near edge — it has to be, because that is the
-    // edge the card stands up on when focused — so the coil sprawls forward
-    // into the front of the desk rather than behind the card. LANYARD_FOOTPRINT
-    // reaches 0.39 that way, which at this group's 0.42 yaw carries 0.5029
-    // forward of the origin: world z 1.3629 against a front edge of 1.44. That
-    // clearance is the reason the object sits at z = 0.86 rather than the 1.10
-    // it used to: the old position put the coil 0.16 past the edge of the desk.
-    // A test checks it, but the number to keep in mind when nudging this is the
-    // 0.077 of air in front. The respacing below deliberately spent none of it.
+    // BOTH COORDINATES ARE SOLVED FROM LANYARD_FOOTPRINT, which is why they
+    // moved when the object lost its lanyard strap. The badge used to sprawl
+    // 0.36 to its own left and 0.39 forward; it is now symmetric at ±0.103 and
+    // reaches 0.2445 forward, so every gap measured against it changed and
+    // neither number could simply be left alone. Both are solved by the same
+    // arithmetic the chain test in deskObjects.test.js walks.
     //
     // x IS THE SPACING UNIT MEASURED OFF THE KEYBOARD. The keyboard's
     // conservative 1.0 x 1.0 box begins at x = -0.5, so this object's right edge
     // has to land one unit short of it at -0.5 - 0.3905 = -0.8905 (the unit is
-    // derived at the breadboard above). The rotated footprint puts maxX 0.2686
-    // right of the origin, so x = -1.1591, written -1.159 for a gap of 0.3904.
+    // derived at the breadboard above). The rotated footprint puts maxX 0.1937
+    // right of the origin, so x = -1.0842, written -1.084 for a gap of 0.3903.
     // THREE DECIMALS ARE NEW TO THIS FILE and they are worth about a millimetre
-    // here: the extra digit is what keeps the chain's spread at 0.36 mm rather
-    // than letting rounding widen it. Still inside the test's tolerance,
-    // deliberately, but the digit is the point of the number.
+    // here: the extra digit is what keeps the chain's spread at half a
+    // millimetre rather than letting rounding widen it. Still inside the test's
+    // tolerance, deliberately, but the digit is the point of the number.
+    //
+    // z IS THE SAME UNIT MEASURED OFF THE BENCH, IN DEPTH. The station and the
+    // badge cannot sit side by side — 1.881 of object does not fit in a 2.000
+    // flank — so the one link in this chain that runs front to back is this
+    // one. The bench's footprint ends at z 0.2760, the rotated badge starts
+    // 0.1844 behind its own origin, so z = 0.3905 + 0.2760 + 0.1844 = 0.8509.
+    //
+    // THE FRONT EDGE NO LONGER BINDS, and it used to be the thing that set this
+    // number outright: the coil reached world z 1.3629 against a desk edge of
+    // 1.44, i.e. 0.077 of air, and z was pulled back from 1.10 to 0.86 to buy
+    // it. The badge now finishes at 1.1162 with 0.32 to spare, so depth spacing
+    // gets to decide instead of clearance. A test still checks the edge.
     //
     // MOVED IN FROM x = -2.42, and the move is a plausibility fix as much as a
     // spacing one: out there the badge lay in the middle of the soldering
@@ -329,7 +347,7 @@ export const deskObjects = [
         category: 'work',
         label: CATEGORY_LABELS.work,
         clickable: true,
-        position: [-1.159, 0, 0.86],
+        position: [-1.084, 0, 0.851],
         rotation: [0, 0.42, 0],
         // A card is 8 mm thick. The desk's default 0.06 raises it eight card
         // thicknesses, which reads as a bug rather than as a hover.
@@ -360,16 +378,21 @@ export const deskObjects = [
             // CARD, and the difference is the whole correctness of the move. A
             // rigid rotation sends everything IN FRONT of the pivot downward:
             // hinge on the card's own edge and the slot, the swivel and the
-            // ring — all of which sit forward of it — swing straight through
+            // clip — all of which sit forward of it — swing straight through
             // the desktop, five centimetres under a desk they are supposed to
             // be resting on. Putting the hinge at the outermost point of the
-            // lifted assembly (the front of the split ring, 0.2205 in
-            // content/lanyard.js's frame) leaves nothing forward of it to sink,
-            // and lands the hinge exactly where the strap begins — so the badge
-            // stands propped on its own clip with the tape still attached to
-            // it, which is both correct and a better image than the card alone.
+            // lifted assembly leaves nothing forward of it to sink, and lands
+            // it on the clip's own lip — so the badge stands propped on the
+            // piece of hardware whose job is to hold it up, which is both
+            // correct and a better image than a card standing on nothing.
             // A test simulates the pose and fails if any lifted part goes below
             // the desk; it is the assertion to keep if these numbers change.
+            //
+            // TAKEN BY NAME (content/lanyard.js's BADGE_FRONT) RATHER THAN
+            // TYPED. It was a literal 0.2205 while it was the front of a split
+            // ring, and a literal is exactly what goes stale the next time the
+            // hardware is resized — silently, because the failure is parts
+            // dipping below a desktop nobody is looking under.
             //
             // THE FRAMING FOLLOWS FROM THE POSE, and every number in it is
             // derived rather than eyeballed. At 1.15 rad the card's face normal
@@ -411,11 +434,11 @@ export const deskObjects = [
             // filled 60% — nearly double what the canvas was drawn for, from
             // 21 cm away, with the camera down at 0.48 where it was reading the
             // desk almost edge-on.
-            camera: { offset: [0.466, 0.654, 1.043], lookAtOffset: [-0.243, 0.205, 0.26] },
+            camera: { offset: [0.471, 0.676, 1.056], lookAtOffset: [-0.238, 0.226, 0.272] },
             anchor: {
                 position: [0, 0, 0],
                 travel: [0.34, 0, 0.02],
-                present: { pivot: [0, 0, 0.2205], rotation: [1.15, 0, 0] }
+                present: { pivot: [0, 0, BADGE_FRONT], rotation: [1.15, 0, 0] }
             }
         }
     },
