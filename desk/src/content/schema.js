@@ -1,8 +1,22 @@
+/**
+ * The categories, and the object on the desk that each one is entered through.
+ *
+ * THE CUT IS BY MEDIUM, NOT BY EMPLOYER. A résumé sorts by institution and
+ * date because that is the only ordering a single sheet of paper can carry. A
+ * desk cannot sort that way — there is no object that means "2023" — so these
+ * are cut by what the thing physically *is*: something that ran on a screen
+ * (`software`, read off the display), something printed (`academia`, the
+ * stapled run of printouts), something you could pick up (`hardware`, the
+ * breadboard), a job you held (`work`, the badge on the lanyard). Four
+ * mediums, and four objects on the desk to enter them through. That is why the
+ * Apple work appears under `software` and the Apple *job* under `work`, and
+ * why those are two different entries rather than one.
+ */
 export const CATEGORY_LABELS = {
     software: 'Software',
-    essays: 'Essays',
-    diary: 'Diary',
-    hardware: 'Hardware'
+    hardware: 'Hardware',
+    work: 'Work',
+    academia: 'Academia'
 };
 
 const VALID_CATEGORIES = Object.keys(CATEGORY_LABELS);
@@ -66,6 +80,26 @@ export function validateWork(work) {
         if (!link.label || !link.href) {
             throw new Error(`Work "${work.id}" has an editorial.link missing "label" or "href"`);
         }
+    }
+
+    // Optional: the 3D object that stands in for this work when its category
+    // renders as real geometry rather than text (the hardware bench, the
+    // lanyard). An artifact is either a loaded model or a set of primitives —
+    // the same two ways a desk object itself may be built, and for the same
+    // reason: a soldering iron has to be modelled, an ID badge is a card with
+    // lettering on it and would be absurd to author in Blender.
+    //
+    // Anything without an artifact at all falls back to a generated board, so
+    // the only way to get this wrong is to declare one and give it neither.
+    if (work.artifact && !work.artifact.modelUrl && !work.artifact.parts?.length) {
+        throw new Error(
+            `Work "${work.id}" has an "artifact" with neither a "modelUrl" nor a non-empty "parts" array`
+        );
+    }
+    if (work.artifact?.modelUrl && work.artifact.parts) {
+        throw new Error(
+            `Work "${work.id}" has an "artifact" with both a "modelUrl" and "parts" — it is one or the other`
+        );
     }
 
     return work;

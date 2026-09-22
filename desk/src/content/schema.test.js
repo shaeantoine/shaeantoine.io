@@ -8,7 +8,7 @@ const validWork = {
     previewImage: '/previews/test.svg',
     blurb: 'A short test blurb.',
     previewAspect: 'square',
-    category: 'essays',
+    category: 'software',
     connections: [{ workId: 'w2', sentence: 'because' }],
     editorial: {
         credit: 'Shae McKenna',
@@ -81,9 +81,47 @@ describe('CATEGORY_LABELS', () => {
     it('has a display label for every valid category', () => {
         expect(CATEGORY_LABELS).toEqual({
             software: 'Software',
-            essays: 'Essays',
-            diary: 'Diary',
-            hardware: 'Hardware'
+            hardware: 'Hardware',
+            work: 'Work',
+            academia: 'Academia'
         });
+    });
+});
+
+describe('validateWork — artifacts', () => {
+    const hardwareWork = { ...validWork, category: 'hardware' };
+
+    it('accepts an artifact built from a model', () => {
+        const work = { ...hardwareWork, artifact: { modelUrl: '/models/thing.glb', targetSize: 0.5 } };
+        expect(() => validateWork(work)).not.toThrow();
+    });
+
+    it('accepts an artifact built from primitives', () => {
+        // The lanyard's badges. A card with lettering on it would be absurd to
+        // author in Blender, so `parts` is a first-class alternative rather
+        // than a fallback.
+        const work = { ...hardwareWork, artifact: { parts: [{ type: 'box', args: [1, 1, 1], color: '#fff' }] } };
+        expect(() => validateWork(work)).not.toThrow();
+    });
+
+    it('throws when an artifact has neither a model nor parts', () => {
+        const work = { ...hardwareWork, artifact: { targetSize: 0.5 } };
+        expect(() => validateWork(work)).toThrow(/neither a "modelUrl" nor a non-empty "parts"/);
+    });
+
+    it('throws when an artifact declares parts but the array is empty', () => {
+        const work = { ...hardwareWork, artifact: { parts: [] } };
+        expect(() => validateWork(work)).toThrow(/neither a "modelUrl" nor a non-empty "parts"/);
+    });
+
+    it('throws when an artifact tries to be both at once', () => {
+        // Nothing downstream picks a winner — artifactStrategy branches on
+        // `parts` and would silently ignore the model, so this has to fail
+        // here rather than render the wrong object.
+        const work = {
+            ...hardwareWork,
+            artifact: { modelUrl: '/models/thing.glb', parts: [{ type: 'box', args: [1, 1, 1], color: '#fff' }] }
+        };
+        expect(() => validateWork(work)).toThrow(/both a "modelUrl" and "parts"/);
     });
 });

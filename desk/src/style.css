@@ -62,6 +62,12 @@
     --space-section: 96px;
 
     --header-height: 72px;
+
+    /* Overwritten by main.js from SPREAD_FADE_MS, which is itself derived from
+       artifactStrategy's SWAP_MS. The value here is only what applies for the
+       frames before the module runs; the relationship is owned in JS, because
+       it is a choreography constraint rather than a style choice. */
+    --spread-fade: 150ms;
 }
 
 * { box-sizing: border-box; }
@@ -74,12 +80,6 @@ html, body {
     font-family: var(--font-family);
 }
 
-body { cursor: none; }
-
-@media (pointer: coarse) {
-    body { cursor: auto; }
-}
-
 .site-header {
     position: fixed;
     inset: 0 0 auto 0;
@@ -90,8 +90,21 @@ body { cursor: none; }
     padding: 0 5vw;
     background: transparent;
     border-bottom: 1px solid transparent;
-    transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
+    /* Starts out of the way and is brought in by main.js once the veil has
+       begun to dissolve. The 350 ms delay is the whole point of it being
+       separate: the room should land first and the site chrome arrive over the
+       top of it a beat later. Revealed together they read as one flat layer,
+       and the header — which is two lines of small type over a photograph of a
+       room — is the half that loses. */
+    opacity: 0;
+    transition:
+        opacity 450ms ease 350ms,
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        backdrop-filter 0.3s ease;
 }
+
+.site-header.is-revealed { opacity: 1; }
 
 .site-header[hidden] { display: none; }
 
@@ -137,35 +150,60 @@ body { cursor: none; }
     justify-content: center;
     background: var(--color-canvas);
     color: var(--color-body);
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    transition: opacity 0.4s ease;
+    /* Long, and decelerating rather than symmetric. The veil is a sheet of flat
+       canvas-white over a lit room, so a quick fade reads as the page snapping
+       on; drawn out to 700 ms with most of the change in the first third, the
+       room surfaces through it instead. Runs against the camera's 1800 ms
+       push-in (see INTRO_OFFSET in scene/CameraRig.js) and finishes well inside
+       it on purpose — the move should still be going when the dissolve ends. */
+    transition: opacity 700ms cubic-bezier(0.33, 0, 0.2, 1);
 }
 
 .loading-veil[hidden] { display: none; }
 
-.loading-veil.fading { opacity: 0; }
-
-.cursor-ring {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 200;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-pill);
-    background: var(--color-primary);
+.loading-veil.fading {
+    opacity: 0;
+    /* The canvas is live underneath from the first frame of the dissolve. */
     pointer-events: none;
-    transform: translate(-50%, -50%);
-    transition: width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
-    mix-blend-mode: difference;
 }
 
-.cursor-ring[hidden] { display: none; }
+.loading-veil-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
 
-.cursor-ring.expanded {
-    width: 48px;
-    height: 48px;
+.loading-veil-name {
+    font-size: var(--font-eyebrow-size);
+    font-weight: var(--font-eyebrow-weight);
+    line-height: var(--font-eyebrow-line-height);
+    letter-spacing: var(--font-eyebrow-tracking);
+    color: var(--color-ink);
+}
+
+/* A hairline rule that fills, rather than a spinner or a percentage. It is the
+   same weight as every other rule on the site, it has no idle animation left
+   running once the work is done, and — unlike a spinner — it answers the one
+   question a visitor actually has, which is whether this is nearly over. */
+.loading-veil-track {
+    width: 132px;
+    height: 1px;
+    overflow: hidden;
+    background: var(--color-hairline);
+}
+
+.loading-veil-bar {
+    width: 100%;
+    height: 100%;
+    background: var(--color-ink);
+    transform: scaleX(0);
+    transform-origin: left center;
+    /* Progress arrives in two dozen steps of wildly uneven weight, so the
+       truthful version of this bar lurches. Easing each step over its own
+       transition turns that into continuous travel — nicer to watch, and a
+       better description of what is actually happening than the steps are. */
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .desk-canvas {
@@ -210,43 +248,42 @@ body { cursor: none; }
 
 .webgl-fallback[hidden] { display: none; }
 
-.modal-overlay {
+.focus-vignette {
     position: fixed;
     inset: 0;
-    z-index: 80;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-modal-scrim);
+    z-index: 40;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 40%, var(--color-modal-scrim) 130%);
     opacity: 0;
-    transition: opacity 0.35s ease;
+    transition: opacity 0.25s ease;
 }
 
-.modal-overlay[hidden] { display: none; }
+.focus-vignette[hidden] { display: none; }
+.focus-vignette.visible { opacity: 0.6; }
 
-.modal-overlay.visible { opacity: 1; }
-
-.modal-panel {
-    position: relative;
-    width: min(560px, 90vw);
-    max-height: 85vh;
-    overflow-y: auto;
+.focus-panel {
+    position: fixed;
+    z-index: 70;
+    width: min(420px, 88vw);
+    max-height: 70vh;
     background: var(--color-canvas);
     border-radius: var(--radius-lg);
-    box-shadow: 0 32px 80px rgba(20, 20, 20, 0.24);
-    transform: scale(0.94);
+    box-shadow: 0 24px 60px rgba(20, 20, 20, 0.2);
+    padding: var(--space-lg);
     opacity: 0;
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+    transform: translateY(8px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
-.modal-panel[hidden] { display: none; }
+.focus-panel[hidden] { display: none; }
+.focus-panel:not([hidden]) { opacity: 1; transform: translateY(0); }
 
-.modal-overlay.visible .modal-panel {
-    transform: scale(1);
-    opacity: 1;
+.focus-panel-scroll {
+    max-height: calc(70vh - 2 * var(--space-lg));
+    overflow-y: auto;
 }
 
-.modal-close {
+.focus-panel-close {
     position: absolute;
     top: var(--space-sm);
     right: var(--space-sm);
@@ -265,124 +302,94 @@ body { cursor: none; }
     transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.modal-close:hover {
+.focus-panel-close:hover {
     color: var(--color-ink);
     border-color: var(--color-ink);
 }
 
-.category-list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-lg);
-    border-bottom: 1px solid var(--color-hairline);
-}
-
-.category-list-header .modal-close {
-    position: static;
-}
-
-.category-list-title {
-    font-size: var(--font-h1-size);
-    font-weight: var(--font-h1-weight);
-    line-height: var(--font-h1-line-height);
-    letter-spacing: var(--font-h1-tracking);
-    color: var(--color-ink);
-    margin: 0;
-}
-
-.category-list-items {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: var(--space-lg);
-}
-
-.category-list-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm);
-    background: var(--color-surface);
-    border-radius: var(--radius-sm);
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.category-list-item:hover {
-    background: var(--color-surface-hover);
-}
-
-.category-list-item-preview {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
-    flex-shrink: 0;
-}
-
-.category-list-item-body {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.category-list-item-title {
-    font-size: var(--font-body-md-size);
-    font-weight: 550;
-    color: var(--color-ink);
-}
-
-.category-list-item-blurb {
-    font-size: var(--font-label-sm-size);
-    color: var(--color-body);
-}
-
-.category-list-empty {
-    color: var(--color-body);
-    font-size: var(--font-body-md-size);
-    padding: var(--space-lg);
-    text-align: center;
-}
-
-.editorial {
-    position: fixed;
-    inset: 0;
-    overflow-y: auto;
-    padding: var(--space-section) max(var(--space-lg), 8vw) var(--space-section);
-    background: var(--color-canvas);
-}
-
-.editorial[hidden] { display: none; }
-
-.editorial-close {
-    position: fixed;
-    left: var(--space-lg);
-    top: var(--space-lg);
-    z-index: 20;
-    width: 2.25rem;
-    height: 2.25rem;
+.focus-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2.5rem;
+    height: 2.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: var(--radius-pill);
     background: var(--color-surface);
     border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-pill);
-    color: var(--color-body);
-    font-size: 1.1rem;
+    color: var(--color-ink);
+    font-size: 1.4rem;
     line-height: 1;
     cursor: pointer;
     transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.editorial-close:hover {
+.focus-arrow[data-arrow="prev"] { left: calc(-1.25rem - 8px); }
+.focus-arrow[data-arrow="next"] { right: calc(-1.25rem - 8px); }
+.focus-arrow:disabled { opacity: 0.3; cursor: default; }
+
+.screen-arrow {
+    position: fixed;
+    z-index: 60;
+    transform: translate(-50%, -50%);
+    width: 2.75rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    border: 1px solid var(--color-hairline);
     color: var(--color-ink);
-    border-color: var(--color-ink);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    opacity: 0;
 }
 
+.screen-arrow[hidden] { display: none; }
+/* Faded up only once the focus dolly has settled and main.js has placed them,
+   so the arrives-in-position reveal never animates a moving target. The
+   disabled rule is scoped to .visible so it can't outrank the hidden state. */
+.screen-arrow.visible { opacity: 1; }
+.screen-arrow.visible:disabled { opacity: 0.3; cursor: default; }
+
+.focus-index {
+    font-size: var(--font-label-sm-size);
+    font-weight: var(--font-label-sm-weight);
+    color: var(--color-body);
+    margin: 0 0 var(--space-sm);
+}
+
+.connection-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-hairline);
+}
+
+.connection-chip {
+    background: var(--color-surface);
+    color: var(--color-body);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    cursor: pointer;
+    font-size: var(--font-body-md-size);
+    line-height: var(--font-body-md-line-height);
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.connection-chip:hover { background: var(--color-surface-hover); color: var(--color-ink); }
+
 .editorial-kicker {
-    max-width: 720px;
-    margin: 0 auto var(--space-sm);
+    margin: 0 0 var(--space-sm);
     font-size: var(--font-eyebrow-size);
     font-weight: var(--font-eyebrow-weight);
     line-height: var(--font-eyebrow-line-height);
@@ -391,24 +398,11 @@ body { cursor: none; }
     text-transform: uppercase;
 }
 
-.editorial-title,
-.editorial-credit,
-.editorial-body,
-.stat-block,
-.quote-block,
-.bio-card,
-.link-row,
-.related-rail {
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
 .editorial-title {
-    font-size: var(--font-display-size);
-    font-weight: var(--font-display-weight);
-    line-height: var(--font-display-line-height);
-    letter-spacing: var(--font-display-tracking);
+    font-size: var(--font-h1-size);
+    font-weight: var(--font-h1-weight);
+    line-height: var(--font-h1-line-height);
+    letter-spacing: var(--font-h1-tracking);
     color: var(--color-ink);
     margin: 0 0 var(--space-md);
 }
@@ -417,13 +411,13 @@ body { cursor: none; }
     font-size: var(--font-label-sm-size);
     font-weight: var(--font-label-sm-weight);
     color: var(--color-body);
-    margin: 0 0 var(--space-xl);
+    margin: 0 0 var(--space-lg);
 }
 
 .stat-block {
     display: flex;
     flex-direction: column;
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
 }
 
 .stat-value {
@@ -440,26 +434,25 @@ body { cursor: none; }
 }
 
 p.editorial-body {
-    font-size: var(--font-editorial-body-size);
-    font-weight: var(--font-editorial-body-weight);
-    line-height: var(--font-editorial-body-line-height);
+    font-size: var(--font-body-md-size);
+    font-weight: var(--font-body-md-weight);
+    line-height: var(--font-body-md-line-height);
     color: var(--color-body);
-    margin: 0 0 var(--space-lg);
+    margin: 0 0 var(--space-md);
 }
 
 .quote-block {
-    background: var(--color-surface);
+    background: var(--color-surface-hover);
     border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    margin-top: var(--space-xl);
-    margin-bottom: var(--space-xl);
+    padding: var(--space-md);
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
 .quote-block p {
-    font-size: var(--font-quote-size);
-    font-weight: var(--font-quote-weight);
-    line-height: var(--font-quote-line-height);
-    letter-spacing: var(--font-quote-tracking);
+    font-size: var(--font-body-md-size);
+    font-weight: 450;
+    line-height: var(--font-body-md-line-height);
     color: var(--color-ink);
     margin: 0 0 var(--space-sm);
 }
@@ -471,20 +464,20 @@ p.editorial-body {
 }
 
 .bio-card {
-    background: var(--color-surface);
+    background: var(--color-surface-hover);
     border-radius: var(--radius-md);
-    padding: 20px;
+    padding: var(--space-md);
     font-size: var(--font-body-md-size);
     line-height: var(--font-body-md-line-height);
     color: var(--color-body);
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
 }
 
 .link-row {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-lg);
 }
 
 .link-pill {
@@ -500,26 +493,251 @@ p.editorial-body {
 
 .link-pill:hover { background: var(--color-surface-hover); }
 
-.related-rail {
+/* ── Artifact spread ──────────────────────────────────────────
+   The hardware object's text, set as a column beside it rather than in a
+   panel over it. Anchored to the viewport rather than to the object's
+   screen-space box: the arrows are controls *for* the object and belong
+   pinned to it, but a reading measure that reflowed as the camera moved
+   would be worse than one that simply holds still. The focus camera is aimed
+   to leave the right of the frame clear (see deskObjects.js). */
+
+/* The falloff the type is read against — a broad directional gradient rather
+   than a filled panel, so there is no edge anywhere and it reads as the scene
+   dropping into shadow rather than as a card laid over it.
+   
+   This is also what settles a fight the spread was losing. The focus vignette
+   darkens everything past 40% of the frame's radius, and the column sits from
+   52% to 95% across — so near-black ink was being set on a backdrop the
+   vignette was busy pushing toward near-black too, over the high-frequency
+   detail of the rest of the desk. Committing to the dark and inverting the
+   type turns that from a problem into the thing that makes it legible.
+   
+   Masked off at the top so it doesn't reach under the site header, whose nav
+   links are dark and sit above this in the stack. */
+.artifact-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 45; /* over the vignette, under the arrows and the text */
+    pointer-events: none;
+    background: linear-gradient(
+        to right,
+        transparent 34%,
+        rgba(16, 15, 14, 0.44) 62%,
+        rgba(16, 15, 14, 0.74) 100%
+    );
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 100%);
+    opacity: 0;
+    transition: opacity var(--spread-fade) ease;
+}
+
+.artifact-scrim[hidden] { display: none; }
+.artifact-scrim.visible { opacity: 1; }
+
+.artifact-spread {
+    /* Read against the scrim above, so the whole column inverts. Kept as
+       local custom properties rather than added to :root — the palette has no
+       on-dark tokens because nothing else in the app is set on dark, and
+       flipping this back later should be a four-line change in one place. */
+    --spread-ink: var(--color-on-primary);
+    --spread-body: rgba(250, 250, 250, 0.74);
+    --spread-hairline: rgba(250, 250, 250, 0.2);
+    --spread-surface: rgba(250, 250, 250, 0.09);
+
+    position: fixed;
+    z-index: 65;
+    top: 50%;
+    left: 52%;
+    right: 5vw;
+    transform: translateY(-50%);
+    max-width: 30rem;
+    max-height: 74vh;
+    overflow-y: auto;
+    opacity: 0;
+    /* Driven by SPREAD_FADE_MS in main.js — the two halves of this crossfade
+       are timed to land inside the object's own swap. */
+    transition: opacity var(--spread-fade) ease;
+    /* Insurance, not the mechanism: the gradient does the work, and this only
+       has to hold up the few glyphs that land where it is weakest. Tight
+       enough not to read as a glow. */
+    text-shadow: 0 1px 3px rgba(10, 9, 8, 0.55);
+}
+
+.artifact-spread[hidden] { display: none; }
+.artifact-spread.visible { opacity: 1; }
+
+.spread-eyebrow {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    justify-content: space-between;
     gap: var(--space-md);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-hairline);
+    margin: 0 0 var(--space-sm);
+    font-size: var(--font-eyebrow-size);
+    font-weight: var(--font-eyebrow-weight);
+    line-height: var(--font-eyebrow-line-height);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--spread-body);
 }
 
-.related-rail-item {
-    background: var(--color-surface);
-    border-radius: var(--radius-sm);
-    padding: var(--space-md);
-    color: var(--color-body);
+.spread-count { font-variant-numeric: tabular-nums; }
+
+.spread-title {
+    margin: 0;
+    font-size: var(--font-display-size);
+    font-weight: var(--font-display-weight);
+    line-height: var(--font-display-line-height);
+    letter-spacing: var(--font-display-tracking);
+    color: var(--spread-ink);
+}
+
+.spread-meta {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--font-label-sm-size);
+    font-weight: var(--font-label-sm-weight);
+    color: var(--spread-body);
+}
+
+.spread-blurb {
+    margin: var(--space-md) 0 0;
+    font-size: var(--font-quote-size);
+    font-weight: var(--font-quote-weight);
+    line-height: var(--font-quote-line-height);
+    letter-spacing: var(--font-quote-tracking);
+    color: var(--spread-ink);
+}
+
+.spread-rule {
+    margin: var(--space-lg) 0;
+    border: 0;
+    border-top: 1px solid var(--spread-hairline);
+}
+
+.spread-body p {
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-editorial-body-size);
+    font-weight: var(--font-editorial-body-weight);
+    line-height: var(--font-editorial-body-line-height);
+    color: var(--spread-body);
+}
+
+.spread-body p:last-child { margin-bottom: 0; }
+
+.spread-stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    margin: var(--space-lg) 0 0;
+}
+
+.spread-stat-value {
+    font-size: var(--font-h1-size);
+    font-weight: var(--font-h1-weight);
+    line-height: var(--font-h1-line-height);
+    letter-spacing: var(--font-h1-tracking);
+    color: var(--spread-ink);
+}
+
+.spread-stat-label {
+    font-size: var(--font-label-sm-size);
+    font-weight: var(--font-label-sm-weight);
+    color: var(--spread-body);
+}
+
+.spread-quote {
+    margin: var(--space-lg) 0 0;
+    padding: var(--space-lg);
+    background: var(--spread-surface);
+    border-radius: var(--radius-md);
+}
+
+.spread-quote p {
+    margin: 0;
+    font-size: var(--font-quote-size);
+    font-weight: var(--font-quote-weight);
+    line-height: var(--font-quote-line-height);
+    color: var(--spread-ink);
+}
+
+.spread-quote cite {
+    display: block;
+    margin-top: var(--space-sm);
+    font-size: var(--font-label-sm-size);
+    font-style: normal;
+    color: var(--spread-body);
+}
+
+.spread-links,
+.spread-connections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+/* Outlined rather than filled: a white pill on this backdrop would be the
+   brightest thing in the frame, louder than the object it belongs to. */
+.spread-link,
+.spread-connection {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--spread-hairline);
+    border-radius: var(--radius-pill);
+    color: var(--spread-ink);
+    font-family: inherit;
+    font-size: var(--font-label-sm-size);
+    font-weight: var(--font-label-sm-weight);
     text-decoration: none;
-    font-size: var(--font-body-md-size);
-    line-height: var(--font-body-md-line-height);
-    transition: color 0.2s ease, background-color 0.2s ease;
+    text-shadow: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.related-rail-item:hover {
-    color: var(--color-ink);
-    background: var(--color-surface-hover);
+.spread-link:hover,
+.spread-connection:hover {
+    background: var(--spread-surface);
+    border-color: var(--spread-ink);
+}
+
+.spread-connection { text-align: left; }
+
+/* Below this the object and a reading measure stop fitting side by side, so
+   the column takes the lower half of the frame instead of the right of it —
+   and the falloff has to turn with it, rising from the bottom edge. */
+@media (max-width: 60rem) {
+    .artifact-scrim {
+        background: linear-gradient(
+            to bottom,
+            transparent 30%,
+            rgba(16, 15, 14, 0.44) 58%,
+            rgba(16, 15, 14, 0.78) 100%
+        );
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .artifact-spread {
+        top: auto;
+        bottom: var(--space-xl);
+        left: 5vw;
+        right: 5vw;
+        max-width: none;
+        max-height: 44vh;
+        transform: none;
+    }
+
+    .spread-title { font-size: var(--font-h1-size); }
+}
+
+/* The opening sequence is the one place on this site where motion happens
+   without the visitor having asked for it, so it is also the one place that has
+   to have an answer for someone who would rather it didn't. The camera's
+   push-in is skipped in main.js — a transform cannot be reasoned about from
+   here — and what is left is shortened to a plain, quick cross-fade. Not
+   removed outright: the alternative to a fade is a cut from white to a lit
+   room, which is a harsher thing to do to someone than a 200 ms dissolve. */
+@media (prefers-reduced-motion: reduce) {
+    .loading-veil { transition-duration: 200ms; }
+    .loading-veil-bar { transition-duration: 100ms; }
+    .site-header { transition-delay: 0s; }
 }

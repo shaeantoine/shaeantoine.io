@@ -6,7 +6,14 @@
     <title>Shae McKenna's Desk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;560;600&display=swap">
+    <!-- The range syntax (400..700) serves ONE variable woff2 covering every
+         weight. The discrete list this replaces (400;450;500;550;560;600) was
+         six separate static files, and it was also missing 700 — which
+         src/scene/idleScreenCanvas.js and screenCanvas.js both ask for when
+         drawing the monitor, so those titles were being synthesised rather
+         than set. See src/fonts.js for why canvas text makes this load-bearing
+         in a way DOM text is not. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -19,8 +26,6 @@
         </div>
     </header>
 
-    <div id="cursor-ring" class="cursor-ring" hidden></div>
-
     <canvas id="desk-canvas" class="desk-canvas" hidden></canvas>
 
     <div id="desk-object-label" class="desk-object-label" hidden></div>
@@ -30,14 +35,20 @@
     </div>
 
     <div id="loading-veil" class="loading-veil">
-        <span>Loading</span>
+        <div class="loading-veil-inner">
+            <span class="loading-veil-name">Shae McKenna</span>
+            <div class="loading-veil-track" role="progressbar" aria-label="Loading the desk" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="loading-veil-bar" class="loading-veil-bar"></div>
+            </div>
+        </div>
     </div>
 
-    <div id="modal-overlay" class="modal-overlay" hidden>
-        <div id="modal-panel" class="modal-panel" hidden></div>
-    </div>
-
-    <article id="editorial" class="editorial" hidden></article>
+    <div id="focus-vignette" class="focus-vignette" hidden></div>
+    <div id="artifact-scrim" class="artifact-scrim" hidden></div>
+    <div id="focus-panel" class="focus-panel" hidden></div>
+    <article id="artifact-spread" class="artifact-spread" aria-live="polite" hidden></article>
+    <button id="screen-arrow-prev" class="screen-arrow" type="button" aria-label="Previous project" hidden>&lsaquo;</button>
+    <button id="screen-arrow-next" class="screen-arrow" type="button" aria-label="Next project" hidden>&rsaquo;</button>
 
     <script type="module" src="./src/main.js"></script>
 </body>

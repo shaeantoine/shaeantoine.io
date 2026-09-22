@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "assets:models": "bash scripts/optimize-models.sh",
+    "assets:images": "bash scripts/optimize-images.sh"
   },
   "dependencies": {
     "three": "^0.169.0"
