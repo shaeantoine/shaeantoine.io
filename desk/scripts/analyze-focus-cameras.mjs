@@ -13,12 +13,14 @@
  * those was wrong somewhere on this desk at once, and every individual number
  * looked defensible on its own line.
  *
- * THE BEARING IS NOT A FREE CHOICE. A sheet mesh is a plane laid flat on the
- * desk, which sends the top of its type to the object's own local -z. So for
- * anything flat the camera has to stand along that axis — the object's own yaw —
- * or the type arrives rotated by exactly how far off it you stood. For the
- * badge, which is stood up to meet the camera, the bearing is the card's face
- * normal instead.
+ * THE BEARING IS NOT A FREE CHOICE. A sheet mesh is a plane laid flat in the
+ * object's own frame, which sends the top of its type to that frame's local -z.
+ * So for anything printed the camera has to stand along that axis — the
+ * object's own yaw — or the type arrives rotated by exactly how far off it you
+ * stood. Tipping the object up does not change this: both printed objects that
+ * lie on the desk tip about their local X, which leaves the compass bearing
+ * alone. For the badge, which stands all the way up to meet the camera, the
+ * bearing given below is the card's face normal instead.
  *
  * WHAT IS LEFT TO PICK is the height and the distance, and those two are a
  * trade rather than a preference. Standing back is what stops a 45° lens
@@ -48,6 +50,23 @@ const round = (value) => Number(value.toFixed(3));
 const deg = THREE.MathUtils.radToDeg;
 
 /**
+ * The presented pose, as an Object3D whose children are carried up with it.
+ *
+ * Both the badge and the paper stack tip up about `anchor.present.pivot` when
+ * focused, and this is focus/pose.js's `p -> P + R(p - P)` written out: give
+ * the group the rotation and put its origin at P - R·P.
+ */
+function presentedPose(present) {
+    const pose = new THREE.Object3D();
+    if (!present) return pose;
+    pose.rotation.set(...present.rotation);
+    pose.position
+        .set(...present.pivot)
+        .sub(new THREE.Vector3(...present.pivot).applyEuler(pose.rotation));
+    return pose;
+}
+
+/**
  * The face a visitor is meant to read, as a child of the object's own group and
  * built the way the focus strategy builds it. For the bench, which shows an
  * object rather than a page, it is that object's bounding box instead — flagged
@@ -70,14 +89,14 @@ function readableFace(object) {
         face.position.set(0, anchor.height, 0);
         face.rotation.set(-Math.PI / 2, 0, 0);
         face.userData.size = anchor.size;
-        group.add(face);
+        // The pages hang inside the pose group, so the whole sheaf tips up
+        // together — @see sheetStrategy's `stage`.
+        const pose = presentedPose(anchor.present);
+        pose.add(face);
+        group.add(pose);
     } else if (visual === 'artifact' && anchor.present) {
         const card = object.parts.find((part) => part.badge);
-        const pose = new THREE.Object3D();
-        pose.rotation.set(...anchor.present.rotation);
-        pose.position
-            .set(...anchor.present.pivot)
-            .sub(new THREE.Vector3(...anchor.present.pivot).applyEuler(pose.rotation));
+        const pose = presentedPose(anchor.present);
         face.position.set(...card.position);
         face.rotation.set(...card.rotation);
         face.userData.size = [card.args[0], card.args[1]];
@@ -163,7 +182,9 @@ function measure(object, offset, lookAtOffset) {
  * For anything lying flat that is the object's own yaw, horizontally. For the
  * badge, which is stood up to meet the camera, it is the card's face normal.
  * `shift` slides the aim along screen-right to leave room for the editorial
- * spread, and scales with the distance because the frame does.
+ * spread, and scales with the distance because the frame does. It is negative
+ * for the objects whose spread sits on the LEFT of the viewport, which is both
+ * of them — the aim goes screen-left so the object swings screen-right.
  */
 function solve(object, { elevation, distance, shift = 0 }) {
     const centre = readableFace(object).getWorldPosition(new THREE.Vector3())
@@ -278,10 +299,10 @@ for (const object of deskObjects.filter((entry) => entry.clickable && entry.focu
 console.log('\nsolved, for the objects whose bearing is fixed for them\n');
 const find = (id) => deskObjects.find((entry) => entry.id === id);
 const SWEEP = process.argv.includes('--sweep');
-for (const d of SWEEP ? [1.0, 1.1, 1.24] : [1.1]) {
-    console.log('  ' + solve(find('paper-stack'), { elevation: THREE.MathUtils.degToRad(62), distance: d }));
+for (const d of SWEEP ? [1.0, 1.1, 1.2, 1.24] : [1.13]) {
+    console.log('  ' + solve(find('paper-stack'), { elevation: THREE.MathUtils.degToRad(38), distance: d }));
 }
 for (const d of SWEEP ? [0.9, 1.0, 1.1, 1.25] : [1.1]) {
-    console.log('  ' + solve(find('lanyard'), { distance: d, shift: round(0.2028 * (d / 0.68)) }));
+    console.log('  ' + solve(find('lanyard'), { distance: d, shift: round(-0.2028 * (d / 0.68)) }));
 }
 console.log();

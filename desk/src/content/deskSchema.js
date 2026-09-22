@@ -45,18 +45,24 @@ function validateFocusConfig(object) {
         if (focus.anchor.travel !== undefined && (!Array.isArray(focus.anchor.travel) || focus.anchor.travel.length !== 3)) {
             throw new Error(`Desk object "${object.id}" has a "focus.anchor.travel" that is not a [x, y, z] array`);
         }
-        // The presented pose is all-or-nothing: a rotation with no pivot spins
-        // the parts about the middle of the object instead of the edge they
-        // hinge on, which does not look like a mistake in the data — it looks
-        // like a badge levitating.
-        if (focus.anchor.present !== undefined) {
-            for (const field of ['pivot', 'rotation']) {
-                const value = focus.anchor.present[field];
-                if (!Array.isArray(value) || value.length !== 3 || value.some((entry) => !Number.isFinite(entry))) {
-                    throw new Error(
-                        `Desk object "${object.id}" has a "focus.anchor.present.${field}" that is not a [x, y, z] array of numbers`
-                    );
-                }
+    }
+    // The presented pose is all-or-nothing: a rotation with no pivot spins the
+    // parts about the middle of the object instead of the edge they hinge on,
+    // which does not look like a mistake in the data — it looks like a badge
+    // levitating.
+    //
+    // NOT AN 'artifact' RULE, though it was written as one while the lanyard
+    // was the only thing that stood up. The paper stack now tips its whole
+    // clipped sheaf to a reading slope through the same field and the same code
+    // (@see focus/pose.js), and a `present` nested under any other visual
+    // silently does nothing at all.
+    if (focus.anchor?.present !== undefined) {
+        for (const field of ['pivot', 'rotation']) {
+            const value = focus.anchor.present[field];
+            if (!Array.isArray(value) || value.length !== 3 || value.some((entry) => !Number.isFinite(entry))) {
+                throw new Error(
+                    `Desk object "${object.id}" has a "focus.anchor.present.${field}" that is not a [x, y, z] array of numbers`
+                );
             }
         }
     }

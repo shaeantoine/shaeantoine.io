@@ -499,7 +499,15 @@ p.editorial-body {
    screen-space box: the arrows are controls *for* the object and belong
    pinned to it, but a reading measure that reflowed as the camera moved
    would be worse than one that simply holds still. The focus camera is aimed
-   to leave the right of the frame clear (see deskObjects.js). */
+   to leave the left of the frame clear (see deskObjects.js).
+
+   THE COLUMN USED TO SIT ON THE RIGHT, and the reason it moved is what is
+   behind it rather than anything about the column itself. Both objects that
+   carry a spread stand on the desk's left flank, so swinging them into the
+   left half put the text over the middle of the desk — the display, the
+   keyboard, the rest of the clutter — which is the busiest part of the frame
+   and the one part of it that also contains type. Mirroring the whole
+   arrangement sets the words against the bare left edge of the desk instead. */
 
 /* The falloff the type is read against — a broad directional gradient rather
    than a filled panel, so there is no edge anywhere and it reads as the scene
@@ -507,11 +515,11 @@ p.editorial-body {
    
    This is also what settles a fight the spread was losing. The focus vignette
    darkens everything past 40% of the frame's radius, and the column sits from
-   52% to 95% across — so near-black ink was being set on a backdrop the
+   5% to 48% across — so near-black ink was being set on a backdrop the
    vignette was busy pushing toward near-black too, over the high-frequency
    detail of the rest of the desk. Committing to the dark and inverting the
    type turns that from a problem into the thing that makes it legible.
-   
+
    Masked off at the top so it doesn't reach under the site header, whose nav
    links are dark and sit above this in the stack. */
 .artifact-scrim {
@@ -520,7 +528,7 @@ p.editorial-body {
     z-index: 45; /* over the vignette, under the arrows and the text */
     pointer-events: none;
     background: linear-gradient(
-        to right,
+        to left,
         transparent 34%,
         rgba(16, 15, 14, 0.44) 62%,
         rgba(16, 15, 14, 0.74) 100%
@@ -547,8 +555,8 @@ p.editorial-body {
     position: fixed;
     z-index: 65;
     top: 50%;
-    left: 52%;
-    right: 5vw;
+    left: 5vw;
+    right: 52%;
     transform: translateY(-50%);
     max-width: 30rem;
     max-height: 74vh;
@@ -702,7 +710,7 @@ p.editorial-body {
 .spread-connection { text-align: left; }
 
 /* Below this the object and a reading measure stop fitting side by side, so
-   the column takes the lower half of the frame instead of the right of it —
+   the column takes the lower half of the frame instead of the left of it —
    and the falloff has to turn with it, rising from the bottom edge. */
 @media (max-width: 60rem) {
     .artifact-scrim {

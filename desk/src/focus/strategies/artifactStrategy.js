@@ -1,23 +1,15 @@
 import * as THREE from 'three';
-import { tween, easeInOutCubic, easeReach } from '../../scene/tween.js';
+import { tween, easeInOutCubic } from '../../scene/tween.js';
 import { invalidateShadows } from '../../scene/renderScheduler.js';
-import { DOLLY_DURATION_MS } from '../../scene/CameraRig.js';
 import { loadGLTF } from '../../loaders/gltf.js';
-import { buildPartsGroup, POSE_GROUP_NAME } from '../../scene/partMesh.js';
+import { buildPartsGroup } from '../../scene/partMesh.js';
 import { setSubtreeOpacity as setOpacity } from '../../scene/opacity.js';
+import { measurePresentedTop, tweenPose } from '../pose.js';
 
 // Exported: main.js crossfades the editorial spread's text against this, so
 // the words and the object they describe change in the same beat.
 export const SWAP_MS = 300; // one object out, the next in
 const DEFAULT_TRAVEL = [0.45, 0, 0]; // see `anchor.travel` — local-frame vector pointing to the viewer's right
-
-// How long the object takes to adopt its presented pose, and to put it back.
-// Derived from the dolly rather than typed beside it: the badge should be
-// standing by the time the shot arrives, not still moving after it has settled
-// — the floating chrome is placed the moment the dolly ends — and that
-// relationship has to survive the dolly being retuned. Nine tenths leaves the
-// pose a tenth of the move to have finished in.
-const PRESENT_MS = Math.round(DOLLY_DURATION_MS * 0.9);
 
 /**
  * Loads a work's object, uniformly scaled to `targetSize` and rested at the
@@ -91,62 +83,6 @@ function buildArtifact(artifact) {
     if (artifact.parts) buildPartsArtifact(artifact, wrapper);
     else buildModelArtifact(artifact, wrapper);
     return wrapper;
-}
-
-/**
- * Standing the object up for the camera.
- *
- * WHAT THIS IS FOR. A badge lying flat on a desk is read by the focus camera
- * at a glancing angle, which is the worst possible way to show the one
- * interesting surface it has. `anchor.present` tips the parts tagged
- * `pose: 'lift'` (see scene/partMesh.js) up about a pivot, so the printed face
- * meets the camera and the strap stays on the desk where it fell.
- *
- * ROTATING ABOUT A PIVOT, EXACTLY. A three Group rotates about its own origin,
- * and the origin here is the middle of the card, not the edge it hinges on. A
- * point p ends up at P + R(p - P) for a pivot P, which is the same as giving
- * the group rotation R and position P - R·P — no reparenting, no second group,
- * and no accumulated error from composing offsets frame by frame.
- *
- * @param {THREE.Object3D[]} nodes every slot, so the cards all share the pose
- *        and the swap between them is unchanged by it
- * @param {{ pivot: number[], rotation: number[] }} present
- * @param {number} t 0 = lying as authored, 1 = fully presented
- */
-const posePivot = new THREE.Vector3();
-const poseEuler = new THREE.Euler();
-
-function applyPose(nodes, present, t) {
-    if (!present) return;
-    poseEuler.set(present.rotation[0] * t, present.rotation[1] * t, present.rotation[2] * t);
-    for (const node of nodes) {
-        const pose = node.getObjectByName(POSE_GROUP_NAME);
-        if (!pose) continue;
-        pose.rotation.copy(poseEuler);
-        pose.position
-            .set(...present.pivot)
-            .sub(posePivot.set(...present.pivot).applyEuler(poseEuler));
-    }
-}
-
-/**
- * How high the object reaches once it is standing, in world y.
- *
- * WHY THE CHROME NEEDS TOLD. The floating arrows are pinned to the object's
- * REST bounding box, frozen at load (see DeskScene.getObjectScreenBox, which
- * explains why it cannot be measured live). For a badge that is about to stand
- * up 0.27 above the desk, that box is a thin band around its own base — so the
- * arrows would sit at the foot of a card they are supposed to flank.
- *
- * Measured by posing the object, reading the box, and putting it back, all
- * inside mount: a tween's own onComplete would be too late, since the arrows
- * are revealed the instant the dolly stops and would then visibly jump.
- */
-function measurePresentedTop(node, present, restoreTo) {
-    applyPose([node], present, 1);
-    const top = new THREE.Box3().setFromObject(node).max.y;
-    applyPose([node], present, restoreTo);
-    return top;
 }
 
 /**
@@ -243,45 +179,9 @@ export function createArtifactStrategy() {
                 group.userData.posePresented ?? 0
             );
         }
-        tweenPose(1);
+        tweenPose({ host: group, nodes: slots, present: anchor.present, target: 1 });
         invalidateShadows();
         return activeIndex;
-    }
-
-    /**
-     * Runs the presented pose to `target`, from wherever it currently is.
-     *
-     * THE TWEEN OUTLIVES THIS STRATEGY, which is why its cancel is parked on
-     * the group rather than in this closure. FocusController builds a fresh
-     * strategy for every visit, and the pose has to keep coming back down
-     * after `unmount` has nulled everything here — a new visit that starts
-     * mid-descent then has something to cancel, instead of two tweens writing
-     * to the same rotation.
-     */
-    function tweenPose(target) {
-        const present = anchor?.present;
-        if (!present) return;
-        const host = group;
-        const nodes = slots;
-        host.userData.posePresented ??= 0;
-        const from = host.userData.posePresented;
-        if (from === target) return;
-
-        host.userData.poseTween?.();
-        host.userData.poseTween = tween({
-            from: { t: from },
-            to: { t: target },
-            duration: PRESENT_MS * Math.abs(target - from),
-            easing: easeReach, // a hand tipping the card up, on the dolly's own curve
-            onUpdate({ t }) {
-                host.userData.posePresented = t;
-                applyPose(nodes, present, t);
-            },
-            onComplete() {
-                host.userData.posePresented = target;
-                host.userData.poseTween = null;
-            }
-        });
     }
 
     /**
@@ -367,7 +267,7 @@ export function createArtifactStrategy() {
         // Started before the refs are dropped, and deliberately allowed to
         // outlive them: the object should lie back down over the same beat the
         // camera spends pulling out, not snap flat the instant focus ends.
-        tweenPose(0);
+        tweenPose({ host: group, nodes: slots, present: anchor.present, target: 0 });
         // The chrome's box goes back to the object's own rest bounds. Left set,
         // the hover tooltip would float where the card *would* be if it were
         // standing, on an object that is lying flat.

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { tween, easeInOutCubic, easeOutCubic, easeReach } from '../../scene/tween.js';
 import { DOLLY_DURATION_MS } from '../../scene/CameraRig.js';
+import { POSE_GROUP_NAME } from '../../scene/partMesh.js';
 import { applyTextTexturePolicy } from '../../scene/textTexture.js';
+import { tweenPose } from '../pose.js';
 import { buildPageDeck } from './pagination.js';
 import { createPageCanvas, pageSetupFor, drawPage, DEFAULT_PAPER_STOCK } from './pageCanvas.js';
 
@@ -13,9 +15,10 @@ import { createPageCanvas, pageSetupFor, drawPage, DEFAULT_PAPER_STOCK } from '.
  * so nothing hinges in the middle of it; no facing page, so nothing has to be
  * kept in step with the leaf; and the back of a printed sheet is blank, so
  * there is no second face worth drawing. Nothing about it opens either — it is
- * already open, lying flat on the desk, and focusing it only brings the camera
- * down to it. So the turn is a pivot on the clip, and the only state this keeps
- * is which two sheets are currently stacked.
+ * already open, and focusing it tips the whole clipped sheaf up to a reading
+ * slope and brings the camera down to meet it. So the turn is a pivot on the
+ * clip, and the only state this keeps is which two sheets are currently
+ * stacked.
  *
  * THE TURN. Two coincident sheets lie on the stack: the one you are reading,
  * and, a hair below it, the one after. Stepping forward pivots the top sheet
@@ -113,6 +116,7 @@ function buildSheet(size, canvasWidth, canvasHeight, anisotropy, budget) {
 
 export function createSheetStrategy() {
     let group = null;
+    let stage = null; // where the sheets hang: the pose group, so they tip with the stack
     let anchor = null;
     let hinge = null;
     let leaf = null; // the sheet on top — the one that moves
@@ -144,7 +148,7 @@ export function createSheetStrategy() {
     }
 
     function placeAsBed(mesh) {
-        group.add(mesh);
+        stage.add(mesh);
         mesh.position.set(0, anchor.height - SHEET_GAP, 0);
         mesh.rotation.set(-Math.PI / 2, 0, 0);
         mesh.material.opacity = 1;
@@ -163,6 +167,14 @@ export function createSheetStrategy() {
         turning = false;
         basePosition = group.position.clone();
 
+        // INSIDE THE POSE GROUP, NOT BESIDE IT. content/paperStack.js tags every
+        // one of its parts `pose: 'lift'`, so the whole sheaf tips up to meet
+        // the camera (@see focus/pose.js); pages parented to the object group
+        // itself would stay lying flat over a stack that had stood up without
+        // them. Falls back to the group for a `sheets` object with no pose,
+        // which is how this behaved before the stack was given one.
+        stage = group.getObjectByName(POSE_GROUP_NAME) ?? group;
+
         const { canvasWidth, canvasHeight } = pageSetupFor(anchor);
         const budget = { framing: anchor.framing, bufferHeight };
 
@@ -170,7 +182,7 @@ export function createSheetStrategy() {
         // On the clipped edge, at the height of the top of the stack. Rotating
         // this about +Z lifts the far side of the sheet and carries it left.
         hinge.position.set(-anchor.size[0] / 2, anchor.height, 0);
-        group.add(hinge);
+        stage.add(hinge);
 
         leaf = buildSheet(anchor.size, canvasWidth, canvasHeight, anisotropy, budget);
         bed = buildSheet(anchor.size, canvasWidth, canvasHeight, anisotropy, budget);
@@ -179,6 +191,11 @@ export function createSheetStrategy() {
         draw(leaf, firstItem);
         draw(bed, pageAfter(firstItem));
         setOpacity(0);
+
+        // The sheaf comes up to the reading slope over the dolly's own span, so
+        // that the camera and the object arrive square to each other rather
+        // than one waiting on the other. @see focus/pose.js.
+        tweenPose({ host: group, nodes: [group], present: anchor.present, target: 1 });
 
         const approach = anchor.approach ?? [0, 0, 0];
         cancelActiveTween = tween({
@@ -299,12 +316,18 @@ export function createSheetStrategy() {
             mesh.material.map?.dispose();
             mesh.material.dispose();
         }
-        group.remove(hinge);
+        stage.remove(hinge);
         group.position.copy(basePosition);
+        // Started before the refs are dropped, and deliberately allowed to
+        // outlive them: the sheaf should settle back onto the desk over the
+        // same beat the camera spends pulling out, not drop flat the instant
+        // focus ends. @see focus/pose.js.
+        tweenPose({ host: group, nodes: [group], present: anchor.present, target: 0 });
 
         hinge = null;
         leaf = null;
         bed = null;
+        stage = null;
         group = null;
         anchor = null;
         isOpen = false;

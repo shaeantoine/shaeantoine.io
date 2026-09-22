@@ -8,10 +8,11 @@ const ESTABLISHING_LOOK_AT = { x: 0, y: 1, z: 0 };
  * How long a dolly takes, in and out.
  *
  * Exported because it is not only the camera's business: the sheet strategy's
- * approach runs alongside this move and has to land with it, the lanyard's
- * badge stands up inside it, and main.js holds its chrome reveal until the rig
- * reports it has settled. One constant, imported, rather than three copies that
- * agree today.
+ * approach runs alongside this move and has to land with it, both the lanyard's
+ * badge and the paper stack's sheaf come up to meet the camera inside it (see
+ * focus/pose.js), and main.js holds its chrome reveal until the rig reports it
+ * has settled. One constant, imported, rather than several copies that agree
+ * today.
  *
  * WHY 900 AND NOT 440. The old value was picked to make a click feel answered,
  * and it does — but what it answers with is a cut with some blur on it. Every
@@ -109,11 +110,12 @@ function animateCameraTo(camera, lookAtTarget, toPosition, toLookAt, onComplete,
  * single fixed distance applied uniformly to every object), `focusOn` takes
  * the clicked object's own `focus.camera` offset/lookAtOffset — the monitor
  * needs a tight, face-on shot to sell its screen, standing 1.98 units out at
- * 8° above the desk; the paper stack needs one at 62°, close in at 1.10,
- * because its page is lying flat on the desk and there is no other way to see
- * it. One fixed distance can't express that difference, so the offset now comes
- * from the object's own config. Both pairs of figures are what
- * scripts/analyze-focus-cameras.mjs prints for those two objects.
+ * 8° above the desk; the paper stack stands 1.20 out at 38°, low enough to be
+ * a person leaning over a page rather than a scanner above one, which it can
+ * only be because the stack tips up to meet it. One fixed distance can't
+ * express that difference, so the offset now comes from the object's own
+ * config. Both pairs of figures are what scripts/analyze-focus-cameras.mjs
+ * prints for those two objects.
  *
  * The offsets are world-space vectors and they translate with the object but do
  * NOT rotate with it: `focusOn` adds them componentwise to the world position

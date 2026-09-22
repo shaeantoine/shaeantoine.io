@@ -1,7 +1,7 @@
 import { CATEGORY_LABELS } from './schema.js';
 import { buildBookRow } from './bookRow.js';
 import { BOOKS } from './books.js';
-import { buildPaperStack, paperStackHeight } from './paperStack.js';
+import { buildPaperStack, paperStackHeight, paperStackFootprint } from './paperStack.js';
 import { workExperience } from './works/work.js';
 import { academia } from './works/academia.js';
 
@@ -11,6 +11,44 @@ import { academia } from './works/academia.js';
 // pages are drawn.
 const SHEET_SIZE = [0.474, 0.672];
 const SHEET_COUNT = 9;
+
+/**
+ * THE STACK TIPS UP ON ITS FRONT EDGE WHEN FOCUSED, the way the lanyard's badge
+ * stands up on its clip, and these are the two numbers that say how far and
+ * about what. Read with `focus.anchor.present` on the paper-stack entry below,
+ * which is the only place they are used; they live up here because the pivot is
+ * derived from the object's own footprint rather than typed.
+ *
+ * 40° IS A DRAFTING BOARD, not a card standing to attention. The badge goes to
+ * 66° because a laminated card propped against something is a plausible object;
+ * a run of loose A5 held by one edge clip is not, past a reading slope. At 40°
+ * the sheaf still reads as resting on the desk, and it is enough to bring the
+ * camera down from 62° above the desktop to 38° — which is the whole point of
+ * doing it. @see the `camera` block below, and focus/pose.js.
+ *
+ * THE PIVOT IS THE FOOTPRINT'S FRONT EDGE, NOT THE SHEET'S. A rigid rotation
+ * sends everything in front of the hinge downward, so the hinge has to be at
+ * the outermost point of the lifted assembly or the part beyond it goes through
+ * the desktop. Here that is not the nominal sheet edge at depth/2 = 0.336 but
+ * the bottom of the fan, which content/paperStack.js's jitter carries out to
+ * 0.367 — the difference between nothing sinking and the widest-fanned corner
+ * dipping a couple of millimetres under the desk. Taken from
+ * paperStackFootprint so it cannot drift when the fan is retuned; a test in
+ * deskObjects.test.js simulates the pose and fails if any part goes under.
+ *
+ * THAT BOUND IS CONSERVATIVE BY ABOUT 0.020, because it bounds the widest fan
+ * the generator could draw rather than the one this seed drew, so tipping about
+ * it lifts the front corner 0.013 clear of the desk instead of leaving it on
+ * it. Accepted rather than solved: DeskScene.holdLift already raises this object
+ * 0.022 for the whole focus session by design, so an exact pivot would close the
+ * smaller half of a gap that is there on purpose.
+ */
+const STACK_TILT = 0.698; // 40°, in radians
+const STACK_PIVOT_Z = paperStackFootprint({
+    sheets: SHEET_COUNT,
+    width: SHEET_SIZE[0],
+    depth: SHEET_SIZE[1]
+}).maxZ;
 
 /**
  * Each entry places one object on the desk. `model.material` is optional and
@@ -196,15 +234,23 @@ export const deskObjects = [
             // a slide — an object leaving along it recedes slightly as it goes.
             //
             // THE AIM IS DELIBERATELY NOT THE OBJECT. It sits 0.58 to the
-            // object's screen-right, which swings the station into the left
-            // half of the frame and leaves the right clear for the editorial
-            // spread (see style.css .artifact-spread, which starts at 52% of
+            // object's screen-LEFT, which swings the station into the right
+            // half of the frame and leaves the left clear for the editorial
+            // spread (see style.css .artifact-spread, which ends at 48% of
             // the viewport). Derived rather than guessed: screen-right in world
             // terms is normalize(cross(-view, up)) ≈ (0.976, 0, -0.216) for
             // this view vector, and the pair below puts the object's bounding
-            // box inside x ∈ [-0.78, -0.02] of the frame at 16:9 and
-            // [-0.92, -0.02] on a 3:2 window — clear of the text column at
+            // box inside x ∈ [0.02, 0.78] of the frame at 16:9 and
+            // [0.02, 0.92] on a 3:2 window — clear of the text column at
             // both, with the tighter aspect the binding one.
+            //
+            // THE SHIFT USED TO GO THE OTHER WAY, with the column on the right.
+            // It was mirrored because of what sat behind the words rather than
+            // anything about the shot: this station is on the desk's left
+            // flank, so pushing it left filled the right of the frame with the
+            // display and the keyboard, and the spread was being read over
+            // them. Pushing it right puts the bare left edge of the desk under
+            // the column instead. The magnitude is unchanged; only the sign is.
             //
             // AND THE AIM IS THE OBJECT'S MIDDLE, which is y = 0.237.
             //
@@ -225,7 +271,7 @@ export const deskObjects = [
             // is transform-aware now and the reported box is the one attachModel
             // actually builds.
             visual: 'artifact',
-            camera: { offset: [1.006, 1.423, 1.865], lookAtOffset: [0.566, 0.237, -0.125] },
+            camera: { offset: [1.006, 1.423, 1.865], lookAtOffset: [-0.566, 0.237, 0.125] },
             anchor: { position: [0, 0, 0], travel: [0.45, 0, 0.02] }
         }
     },
@@ -333,14 +379,20 @@ export const deskObjects = [
             // works out at local (0, 0.205, 0.138) and the camera sits 1.10 out
             // along the normal from it.
             //
-            // `lookAtOffset` is that centre plus a shift along screen-right —
-            // normalize(cross(-normal, up)) ≈ (0.913, 0, -0.408) — which swings
-            // the card into the left third and leaves the right clear for the
+            // `lookAtOffset` is that centre plus a shift along screen-LEFT —
+            // -normalize(cross(-normal, up)) ≈ (-0.913, 0, 0.408) — which swings
+            // the card into the right third and leaves the left clear for the
             // editorial spread (see style.css .artifact-spread). Screen-right is
             // taken from the UNSHIFTED shot, i.e. from the normal the camera
             // stands on rather than from the aimed view vector, which is a
             // different axis once the shift has been applied. Both offsets are
             // WORLD-space; see CameraRig.focusOn.
+            //
+            // THE SHIFT USED TO GO THE OTHER WAY. The column moved to the left
+            // of the viewport because the desk's middle — display, keyboard,
+            // clutter — was ending up behind it; the badge sits on the left
+            // flank, so mirroring the shift puts the empty left edge of the
+            // desk under the words instead. Same 0.33, opposite sign.
             //
             // THE SHIFT SCALES WITH THE DISTANCE, which is why it moved from
             // 0.20 to 0.33 when the camera pulled back. It is a world-space
@@ -359,7 +411,7 @@ export const deskObjects = [
             // filled 60% — nearly double what the canvas was drawn for, from
             // 21 cm away, with the camera down at 0.48 where it was reading the
             // desk almost edge-on.
-            camera: { offset: [0.466, 0.654, 1.043], lookAtOffset: [0.356, 0.205, -0.008] },
+            camera: { offset: [0.466, 0.654, 1.043], lookAtOffset: [-0.243, 0.205, 0.26] },
             anchor: {
                 position: [0, 0, 0],
                 travel: [0.34, 0, 0.02],
@@ -473,10 +525,9 @@ export const deskObjects = [
             // which is a right-handed turn. See
             // focus/strategies/sheetStrategy.js.
             visual: 'sheets',
-            // THE CAMERA'S BEARING IS NOT A FREE CHOICE FOR ANYTHING PRINTED
-            // AND LYING FLAT, and this is the only object left on the desk that
-            // it governs — so the rule is written out here in full rather than
-            // pointed at.
+            // THE CAMERA'S BEARING IS NOT A FREE CHOICE FOR ANYTHING PRINTED,
+            // and this is the only object left on the desk that it governs — so
+            // the rule is written out here in full rather than pointed at.
             //
             // The page mesh is built in the anchor's frame and laid flat by
             // sheetStrategy.placeAsBed's quarter turn about X (there is no
@@ -493,34 +544,71 @@ export const deskObjects = [
             //   page's centre. At that bearing the roll is zero by construction,
             //   at any other it is the angle between them.
             //
-            // The offset below stands at atan2(-0.092, 0.55) = -0.1657 against a
-            // yaw of -0.16, which measures out at 0.04° of roll.
+            // The offset below stands at atan2(-0.183, 1.111) = -0.1631 against
+            // a yaw of -0.16, which measures out at 0.2° of roll.
             // deskObjects.test.js's 'puts the print the right way up on screen'
             // holds it under 8°.
             //
+            // THE TILT IS WHY THIS STILL HOLDS WITH THE CAMERA MUCH LOWER. The
+            // sheaf tips up about its front edge, which is a rotation about the
+            // object's own local X — the camera's compass bearing is unchanged
+            // by it, and a camera on that bearing stays in the object's x = 0
+            // plane no matter how high or low it stands. So the tilt costs the
+            // rule nothing. Rolling the sheaf instead, or tipping it about any
+            // axis but this one, would cost it everything.
+            //
             // WHAT IS LEFT TO CHOOSE IS THE HEIGHT AND THE DISTANCE.
             //
-            // HEIGHT: 62° above the desk. That is a person reading something
-            // lying in front of them — eyes about 50 cm up, page about 30 cm out
-            // — and it is the number that trades legibility against the shot.
-            // Steeper foreshortens the page less and reads more like a document
-            // scanner; shallower is a more natural posture and squashes the
-            // type.
+            // HEIGHT: 38° ABOVE THE DESK, DOWN FROM 62°, AND THE PAGE COMES UP
+            // TO MEET IT. This used to be the steepest shot on the desk, for a
+            // reason that no longer applies: with the page flat, height was the
+            // only lever on how obliquely it was read, and 62° was as low as it
+            // could go while still landing within 28° of the page's normal.
+            // Nothing about that is a posture anyone adopts — it is a camera
+            // looking down at a desk, and it read like one next to the badge
+            // shot, where the object does the work instead and the camera sits
+            // at 24°.
             //
-            // DISTANCE: 1.10, AND IT IS THE PAGE TYPE THAT SETS IT, not taste.
+            // So the page does the work here too now. `anchor.present` below
+            // tips the whole clipped sheaf to a 40° reading slope (@see
+            // STACK_TILT at the top of this file), which lets the camera come
+            // down 24° and STILL read the page more square-on than before: 12°
+            // off the normal against the old 28°. Both numbers moved in the
+            // direction they wanted to and neither was traded for the other,
+            // which is the tell that the flat page was the constraint rather
+            // than the camera height.
+            //
+            // 38 RATHER THAN 50, which is what an exactly face-on shot would
+            // want at this tilt. A page read from dead on its own normal is a
+            // scan of a document; the residual 12° is what says a person is
+            // looking at a thing lying on a desk in a room. It is also inside
+            // the 32° that deskObjects.test.js's 'reads each face square enough
+            // on' allows, with a lot more room to spare than it used to have.
+            //
+            // DISTANCE: 1.20, AND IT IS THE PAGE TYPE THAT SETS IT, not taste.
             // The prose is drawn ON the page — a `sheets` object has no DOM
             // panel, so there is nowhere else for the words to be — which makes
             // distance and legibility one knob turned in opposite directions.
             // This is the densest page in the scene, two columns of 30 px type
             // on a 1400 px canvas (see pageCanvas's `manuscript` stock), so the
             // legibility floor binds sooner here than it would anywhere else:
-            // 1.10 out is 12.8 CSS px of body type on a 900 px viewport, and the
-            // old 1.24 was 9.4. The floor of 12 is held from the other side by
-            // deskObjects.test.js's 'leaves the page type readable at the
-            // distance it chose', which carries the argument for why 9 was not
-            // enough. Closer was tried too and rejected: 0.85 out put the page
-            // across two thirds of the frame and read as shoved in the visitor's
-            // face, with no desk left around it to say where the object was.
+            // 1.20 out is 12.8 CSS px of body type on a 900 px viewport. The
+            // floor of 12 is held from the other side by deskObjects.test.js's
+            // 'leaves the page type readable at the distance it chose', which
+            // carries the argument for why the 9.4 px an earlier version of this
+            // shot delivered was not enough. Closer was tried too and rejected:
+            // 0.85 out put the page across two thirds of the frame and read as
+            // shoved in the visitor's face, with no desk left around it to say
+            // where the object was.
+            //
+            // THE TILT BOUGHT THE 0.10 THIS MOVED OUT BY, and is the only reason
+            // it could move. The distance was 1.10 while the page lay flat, and
+            // what legibility actually depends on is the page's apparent size:
+            // reading it 12° off the normal rather than 28° makes the same page
+            // 8% taller in frame, so the camera can stand 8% further back for
+            // exactly the 12.8 px it had before. Which it should — the extra
+            // standoff is what keeps a 45° lens from keystoning the page and
+            // leaves some desk in shot around it.
             //
             // IT STOPS SHORT OF DOM PARITY ON PURPOSE. The 17 px the DOM spreads
             // elsewhere on this site are set in is not reachable from here by
@@ -533,7 +621,7 @@ export const deskObjects = [
             //
             // It is a portrait page in a landscape frame, so height is the
             // binding dimension rather than width: 66% of frame height against
-            // 34% of the width.
+            // 28% of the width.
             //
             // Unlike the bench and the lanyard there is no editorial spread to
             // leave room for — the words are on the paper — so the page is
@@ -542,11 +630,19 @@ export const deskObjects = [
             // Both offsets are WORLD-space, measured from the group's origin;
             // see CameraRig.focusOn. They translate with `position` and do not
             // rotate with `rotation`, which is why moving this object across the
-            // desk cost the shot nothing.
-            camera: { offset: [-0.092, 1.074, 0.55], lookAtOffset: [-0.01, 0.103, 0.04] },
+            // desk cost the shot nothing. They DO have to be re-solved if the
+            // tilt changes, since the aim point rides up with the page.
+            camera: { offset: [-0.183, 1.058, 1.111], lookAtOffset: [-0.032, 0.319, 0.177] },
             anchor: {
                 size: SHEET_SIZE,
-                framing: [0.607, 0.665], // @see the studio display's `framing`
+                framing: [0.506, 0.663], // @see the studio display's `framing`
+                // THE SHEAF TIPS UP TO MEET THE CAMERA. @see STACK_TILT at the
+                // top of this file for the two numbers, and focus/pose.js for
+                // the mechanism it shares with the badge. Everything in this
+                // object carries the tag — sheets, clip, and the focused pages
+                // hanging inside the same group — so what tips is the whole
+                // clipped run rather than a page peeled off the top of it.
+                present: { pivot: [0, 0, STACK_PIVOT_Z], rotation: [STACK_TILT, 0, 0] },
                 // Just clear of the stack, and of the clip standing on it. The
                 // barrel reaches paperStackHeight + 0.0072 (content/paperStack.js
                 // sinks it deliberately so this number can stay small); a page
@@ -559,6 +655,13 @@ export const deskObjects = [
                 // of paper that levitates off the desk is just a stack of paper
                 // levitating. What little there is runs along the sheet's own
                 // reading axis.
+                //
+                // NOT IN TENSION WITH THE TILT ABOVE, though the two look it.
+                // Tipping up is a hinge: the sheaf pivots on an edge that stays
+                // on the desk, which is a thing paper does when a hand picks it
+                // up to read it. Translating is the object leaving the surface
+                // bodily, which is not. So the tilt can be a full 40° and this
+                // stays a couple of hundredths.
                 approach: [-0.01, 0.02, 0.04],
                 // `paper` picks the stock from pageCanvas.PAPER_STOCKS. A name
                 // that is not in there falls back to the default silently rather

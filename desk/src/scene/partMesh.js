@@ -148,11 +148,15 @@ export function buildPartMesh(part, anisotropy, bufferHeight) {
  * The name of the child group holding every part tagged `pose: 'lift'`.
  *
  * WHY A SUBGROUP RATHER THAN A FLAG PER MESH. Focusing the lanyard stands the
- * badge up while the strap stays lying on the desk (see artifactStrategy's
- * `anchor.present`). That is one rotation applied to some of an object's parts
+ * badge up while the strap stays lying on the desk (see `anchor.present` and
+ * focus/pose.js). That is one rotation applied to some of an object's parts
  * and not others, and the cheapest honest way to express "some of the parts"
  * in three is a group — one transform to animate, and the parts keep their own
  * positions rather than each carrying a second copy of where it started.
+ *
+ * A group is also what lets an object tag ALL of its parts and still be posed
+ * through the same path — which the paper stack does, tipping the whole clipped
+ * sheaf up to a reading slope. Nothing here needs to know the difference.
  *
  * Parts are added in order within their group, so an object that tags nothing
  * builds exactly the flat group it always did.

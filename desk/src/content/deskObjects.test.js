@@ -11,6 +11,50 @@ import { TURN_ANGLE, VISIBLE_ARC } from '../focus/strategies/sheetStrategy.js';
 import { PAPER_STOCKS, metricsFor, PAGE_CANVAS_HEIGHT } from '../focus/strategies/pageCanvas.js';
 import { ART_LIGHT_X } from '../scene/lighting.js';
 
+/**
+ * A part's corners after the presented pose has been applied to it.
+ *
+ * The pose is a rotation about a pivot, which three expresses as a group
+ * rotation plus a compensating offset (see focus/pose.js's applyPose); the
+ * geometry it produces is p -> P + R(p - P), which is what this walks. Euler
+ * composition is XYZ, so R = Rx·Ry·Rz.
+ *
+ * AT MODULE SCOPE BECAUSE TWO OBJECTS TIP UP NOW. The lanyard stands its badge
+ * on its clip and the paper stack tips its whole sheaf onto its front edge, and
+ * both are held to the same thing: nothing that is lifted may end up under the
+ * desktop. One walker, so the two cannot disagree about what the pose does.
+ */
+function posedCorners(part, { pivot, rotation }) {
+    const [hx, hy, hz] = part.type === 'torus'
+        ? [part.args[0] + part.args[1], part.args[0] + part.args[1], part.args[1]]
+        : part.args.slice(0, 3).map((size) => size / 2);
+    const [prx, pry, prz] = part.rotation ?? [0, 0, 0];
+    const [rx, ry, rz] = rotation;
+    const corners = [];
+
+    for (const sx of [-1, 1]) {
+        for (const sy of [-1, 1]) {
+            for (const sz of [-1, 1]) {
+                let [x, y, z] = [sx * hx, sy * hy, sz * hz];
+                // the part's own rotation, then its position
+                [x, y] = [x * Math.cos(prz) - y * Math.sin(prz), x * Math.sin(prz) + y * Math.cos(prz)];
+                [x, z] = [x * Math.cos(pry) + z * Math.sin(pry), -x * Math.sin(pry) + z * Math.cos(pry)];
+                [y, z] = [y * Math.cos(prx) - z * Math.sin(prx), y * Math.sin(prx) + z * Math.cos(prx)];
+                x += part.position[0];
+                y += part.position[1];
+                z += part.position[2];
+                // ...then the pose, about the pivot
+                [x, y, z] = [x - pivot[0], y - pivot[1], z - pivot[2]];
+                [x, y] = [x * Math.cos(rz) - y * Math.sin(rz), x * Math.sin(rz) + y * Math.cos(rz)];
+                [x, z] = [x * Math.cos(ry) + z * Math.sin(ry), -x * Math.sin(ry) + z * Math.cos(ry)];
+                [y, z] = [y * Math.cos(rx) - z * Math.sin(rx), y * Math.sin(rx) + z * Math.cos(rx)];
+                corners.push([x + pivot[0], y + pivot[1], z + pivot[2]]);
+            }
+        }
+    }
+    return corners;
+}
+
 describe('poster-wall', () => {
     const wall = deskObjects.find((object) => object.id === 'poster-wall');
     const shelf = deskObjects.find((object) => object.id === 'wall-shelf');
@@ -873,28 +917,57 @@ describe('the desktop props', () => {
     it('turns the paper stack over desk it can actually reach across', () => {
         // The sheet pivots on the clipped left edge and sweeps left, so while
         // focused this object needs desk to its own local left that it does not
-        // occupy at rest. Rotating about the hinge does not move the sheet in z
-        // at all, so only its x reach matters.
+        // occupy at rest.
+        //
+        // THE TILT DOES NOT TOUCH THE X REACH, which is the one thing worth
+        // knowing before reading the rest. The sheaf tips about the object's own
+        // local X and the sheet turns about its local Z, so the turn's x is
+        // decided by the arc alone and the pose leaves it exactly where it was
+        // when the stack lay flat. What the pose does change is z: a sheet that
+        // used to sweep in the plane of the desktop now rises out of it and
+        // swings toward the viewer as it goes, which is why this walks a real
+        // depth range instead of the sheet's own ±depth/2.
         //
         // WHAT BINDS HERE HAS CHANGED, and the test is written not to name it.
         // While the stack stood at x = -1.30 the visible sweep came within
         // 0.0245 of the soldering station, which is why this assertion exists at
         // all; from x = 1.862 that margin is 2.96 and the station guards nothing.
-        // The real constraint is now the mouse hand, which the sweep clears by
-        // 0.420 — and the next rearrangement will move something else into the
-        // way. So the checks below loop over every other box rather than
-        // hard-coding whichever one happens to be nearest today.
+        // The real constraint is now the mouse hand. So the checks below loop
+        // over every other box rather than hard-coding whichever one happens to
+        // be nearest today.
         const [pageWidth, pageDepth] = stack.focus.anchor.size;
+        const { pivot, rotation } = stack.focus.anchor.present;
+        const tilt = rotation[0];
+        const hinge = stack.focus.anchor.height;
         const reachAt = (angle) => -pageWidth / 2 + pageWidth * Math.cos(angle);
 
+        // Where a point at local (y, z) on the untipped sheet ends up in z once
+        // the sheaf is standing. The sheet is lowest at the start of the arc and
+        // highest at the quarter turn, and z grows with height, so those two are
+        // the bounds.
+        const tiltedZ = (y, z) => pivot[2] + y * Math.sin(tilt) + (z - pivot[2]) * Math.cos(tilt);
+        const depthAt = (angle) => [
+            tiltedZ(hinge, -pageDepth / 2),
+            tiltedZ(hinge + pageWidth * Math.sin(Math.min(angle, Math.PI / 2)), pageDepth / 2)
+        ];
+
+        const [wholeMinZ, wholeMaxZ] = depthAt(TURN_ANGLE);
         const whole = footprint(stack.position, stack.rotation[1], [
-            reachAt(TURN_ANGLE), pageWidth / 2, -pageDepth / 2, pageDepth / 2
+            reachAt(TURN_ANGLE), pageWidth / 2, wholeMinZ, wholeMaxZ
         ]);
         expect(whole[0]).toBeGreaterThan(-DESK_HALF_WIDTH);
         expect(whole[1]).toBeLessThan(DESK_HALF_WIDTH);
+        // AND NOT HELD TO THE FRONT EDGE, deliberately. At the top of its arc
+        // the sheet reaches world z 1.52 against a desktop that stops at 1.44,
+        // so it does overhang — by 8 cm, at 0.88 above the desk, which is a
+        // page in the air over the front of the desk and not a page through
+        // anything. The two edges it has to respect are the left and right ones
+        // above, because those are where other props are.
+        expect(whole[3]).toBeGreaterThan(DESK_FRONT_EDGE);
 
+        const [visibleMinZ, visibleMaxZ] = depthAt(TURN_ANGLE * VISIBLE_ARC);
         const visible = footprint(stack.position, stack.rotation[1], [
-            reachAt(TURN_ANGLE * VISIBLE_ARC), pageWidth / 2, -pageDepth / 2, pageDepth / 2
+            reachAt(TURN_ANGLE * VISIBLE_ARC), pageWidth / 2, visibleMinZ, visibleMaxZ
         ]);
         for (const [id, box] of Object.entries(footprints)) {
             if (id === 'paper-stack') continue;
@@ -905,8 +978,10 @@ describe('the desktop props', () => {
         }
         // And the three boxes in the middle of the desk that are not props, so
         // are not in `footprints`. The mousing zone is the one that binds: the
-        // visible sweep stops 0.466 short of its right edge, one whole spacing
-        // unit, which is the guard the station used to provide.
+        // visible sweep stops 0.336 short of its right edge, which is the guard
+        // the station used to provide. That margin was 0.466 while the stack lay
+        // flat — the tilt spends 0.13 of it, because standing the sheaf up swings
+        // the sweep toward the viewer and the mousing zone reaches back that way.
         for (const [name, box] of [['keyboard', KEYBOARD], ['display', DISPLAY], ['mouse hand', MOUSE_SWEEP]]) {
             const [oMinX, oMaxX, oMinZ, oMaxZ] = box;
             const overlaps = visible[0] < oMaxX && oMinX < visible[1] && visible[2] < oMaxZ && oMinZ < visible[3];
@@ -966,45 +1041,6 @@ describe('the lanyard', () => {
             expect(card.rotation[0]).toBeCloseTo(-Math.PI / 2, 6);
         }
     });
-
-    /**
-     * A part's corners after the presented pose has been applied to it.
-     *
-     * The pose is a rotation about a pivot, which three expresses as a group
-     * rotation plus a compensating offset (see artifactStrategy.applyPose); the
-     * geometry it produces is p -> P + R(p - P), which is what this walks.
-     * Euler composition is XYZ, so R = Rx·Ry·Rz.
-     */
-    function posedCorners(part, { pivot, rotation }) {
-        const [hx, hy, hz] = part.type === 'torus'
-            ? [part.args[0] + part.args[1], part.args[0] + part.args[1], part.args[1]]
-            : part.args.slice(0, 3).map((size) => size / 2);
-        const [prx, pry, prz] = part.rotation ?? [0, 0, 0];
-        const [rx, ry, rz] = rotation;
-        const corners = [];
-
-        for (const sx of [-1, 1]) {
-            for (const sy of [-1, 1]) {
-                for (const sz of [-1, 1]) {
-                    let [x, y, z] = [sx * hx, sy * hy, sz * hz];
-                    // the part's own rotation, then its position
-                    [x, y] = [x * Math.cos(prz) - y * Math.sin(prz), x * Math.sin(prz) + y * Math.cos(prz)];
-                    [x, z] = [x * Math.cos(pry) + z * Math.sin(pry), -x * Math.sin(pry) + z * Math.cos(pry)];
-                    [y, z] = [y * Math.cos(prx) - z * Math.sin(prx), y * Math.sin(prx) + z * Math.cos(prx)];
-                    x += part.position[0];
-                    y += part.position[1];
-                    z += part.position[2];
-                    // ...then the pose, about the pivot
-                    [x, y, z] = [x - pivot[0], y - pivot[1], z - pivot[2]];
-                    [x, y] = [x * Math.cos(rz) - y * Math.sin(rz), x * Math.sin(rz) + y * Math.cos(rz)];
-                    [x, z] = [x * Math.cos(ry) + z * Math.sin(ry), -x * Math.sin(ry) + z * Math.cos(ry)];
-                    [y, z] = [y * Math.cos(rx) - z * Math.sin(rx), y * Math.sin(rx) + z * Math.cos(rx)];
-                    corners.push([x + pivot[0], y + pivot[1], z + pivot[2]]);
-                }
-            }
-        }
-        return corners;
-    }
 
     it('stands the badge up without putting any of it through the desk', () => {
         // THE ASSERTION THIS OBJECT EXISTS TO KEEP. A rigid rotation sends
@@ -1080,7 +1116,7 @@ describe('the lanyard', () => {
         const distance = Math.hypot(...view);
         const alignment = view.reduce((sum, value, i) => sum + (value / distance) * normal[i], 0);
         // Not 1.0: the aim is deliberately pushed a fifth of a frame to the
-        // right of the card to clear space for the editorial spread, and that
+        // left of the card to clear space for the editorial spread, and that
         // composition shift costs a few degrees of squareness.
         expect(alignment).toBeGreaterThan(0.93);
 
@@ -1157,6 +1193,63 @@ describe('the paper stack', () => {
         expect(stack.focus.anchor.size[0]).toBeCloseTo(0.148 * 3.2, 2);
         expect(stack.focus.anchor.size[1]).toBeCloseTo(0.210 * 3.2, 2);
     });
+
+    it('tips the whole sheaf up, not some of it', () => {
+        // The lanyard tags only the badge so the strap stays lying on the desk;
+        // a clipped run of paper has no part that can stay behind, and an
+        // untagged sheet would be left flat on the desk while the eight above it
+        // stood up. Checked on the tag rather than on the render because that is
+        // where it would go wrong — adding a part to content/paperStack.js and
+        // forgetting the `pose` is a one-line, silent omission.
+        expect(stack.parts.every((part) => part.pose === 'lift')).toBe(true);
+    });
+
+    it('tips it to a reading slope without standing it up like a card', () => {
+        const [pitch, yaw, roll] = stack.focus.anchor.present.rotation;
+        expect(pitch).toBeGreaterThan(0.44); // ~25°, below which the camera is still looking down at it
+        expect(pitch).toBeLessThan(0.96); // ~55°, past which loose paper under one edge clip would slide
+        // Any other axis and the print arrives on screen rotated. @see the
+        // bearing rule in this object's `focus.camera` comment, which holds only
+        // because the tilt is pure pitch.
+        expect(yaw).toBe(0);
+        expect(roll).toBe(0);
+    });
+
+    it('tips it up without putting any of it through the desk', () => {
+        // THE SAME ASSERTION THE BADGE KEEPS, and for the same reason: a rigid
+        // rotation sends everything in front of the pivot downward. Here the
+        // trap is that the obvious pivot — the nominal sheet edge at
+        // depth / 2 = 0.336 — is not the front of the object. The fan carries
+        // the bottom sheet out to 0.367, so hinging on the sheet edge would dip
+        // the widest-fanned corner under the desktop: invisible in the data,
+        // visible in the render.
+        const { present } = stack.focus.anchor;
+        for (const part of stack.parts) {
+            for (const [, y] of posedCorners(part, present)) {
+                expect(y).toBeGreaterThanOrEqual(-1e-6);
+            }
+        }
+    });
+
+    it('keeps the tipped sheaf near the desk rather than hovering over it', () => {
+        // The other direction: a pivot pushed far enough forward to satisfy the
+        // test above would lift the whole stack into the air.
+        //
+        // LOOSER THAN THE BADGE'S 0.005, AND ON PURPOSE. The pivot is taken from
+        // paperStackFootprint, which bounds the fan with the WIDEST jitter the
+        // generator could draw rather than the one this seed actually drew, so
+        // it sits about 0.020 forward of the real front corner and tipping about
+        // it lifts that corner 0.013 (4 mm at this scene's scale). Trading the
+        // derivation for an exact pivot is not worth it here: DeskScene.holdLift
+        // already raises this object 0.022 for the whole focus session by
+        // design, so the pose's contribution is the smaller half of a gap that
+        // exists anyway. 0.025 is a bound on "resting-ish", not a measurement.
+        const { present } = stack.focus.anchor;
+        const lowest = Math.min(
+            ...stack.parts.flatMap((part) => posedCorners(part, present).map(([, y]) => y))
+        );
+        expect(lowest).toBeLessThan(0.025);
+    });
 });
 
 describe('the focus cameras', () => {
@@ -1181,6 +1274,25 @@ describe('the focus cameras', () => {
     };
 
     /**
+     * The presented pose, as an Object3D whose children ride up with it.
+     *
+     * Both printed objects that lie on the desk tip up about
+     * `anchor.present.pivot` when focused — the badge onto its clip, the paper
+     * stack onto its front edge — and this is focus/pose.js's
+     * `p -> P + R(p - P)` written out: give the group the rotation and put its
+     * origin at P - R·P.
+     */
+    function presentedPose(present) {
+        const pose = new THREE.Object3D();
+        if (!present) return pose;
+        pose.rotation.set(...present.rotation);
+        pose.position
+            .set(...present.pivot)
+            .sub(new THREE.Vector3(...present.pivot).applyEuler(pose.rotation));
+        return pose;
+    }
+
+    /**
      * The face of an object a visitor is actually meant to read, in world
      * space: where its centre ends up, how big it is, which way it faces, and
      * — the part every one of these shots used to get wrong — which way is up
@@ -1190,10 +1302,11 @@ describe('the focus cameras', () => {
      * layout file, because the whole failure this exists to catch was a set of
      * numbers that each looked right on its own line. The sheet mesh is a plane
      * laid down by sheetStrategy.placeAsBed's quarter turn about X, so its "up"
-     * is the anchor's local +y carried through that turn and then through the
-     * object's yaw; nothing in content/deskObjects.js can say so out loud
-     * because the turn does not live there, which is exactly why the paper stack
-     * ended up being read 51° off its own reading axis.
+     * is the anchor's local +y carried through that turn, then through the
+     * presented pose, and then through the object's yaw; nothing in
+     * content/deskObjects.js can say so out loud because neither the turn nor
+     * the pose lives there, which is exactly why the paper stack ended up being
+     * read 51° off its own reading axis.
      */
     function readableFace(object) {
         const { visual, anchor } = object.focus;
@@ -1213,18 +1326,19 @@ describe('the focus cameras', () => {
             face.position.set(0, anchor.height, 0);
             face.rotation.set(-Math.PI / 2, 0, 0); // sheetStrategy.placeAsBed
             face.userData.size = anchor.size;
-            group.add(face);
+            // The focused pages hang inside the pose group rather than beside
+            // it (sheetStrategy's `stage`), so the sheaf and the page it is
+            // showing tip up as one thing.
+            const pose = presentedPose(anchor.present);
+            pose.add(face);
+            group.add(pose);
         } else if (visual === 'artifact' && anchor.present) {
             // The badge. partMesh maps the print onto the box's +z face and
             // lanyard.js lays the card down by rotating it, so the printed
             // plane is the card part's own transform — and then the focus pose
             // stands the whole thing up about its pivot.
             const card = object.parts.find((part) => part.badge);
-            const pose = new THREE.Object3D();
-            pose.rotation.set(...anchor.present.rotation);
-            pose.position
-                .set(...anchor.present.pivot)
-                .sub(new THREE.Vector3(...anchor.present.pivot).applyEuler(pose.rotation));
+            const pose = presentedPose(anchor.present);
             face.position.set(...card.position);
             face.rotation.set(...card.rotation);
             face.userData.size = [card.args[0], card.args[1]];
@@ -1312,10 +1426,18 @@ describe('the focus cameras', () => {
     it('reads each face square enough on, and never from behind it', () => {
         // Straight on for the two objects that can be — the monitor tilts
         // toward the viewer and the badge is stood up to meet the camera. The
-        // one that lies flat on the desk cannot be: a page read from directly
-        // above is a document scanner, not a person. 32° is eyes about half a
-        // metre up over a page about a third of a metre out, which is the
-        // posture it is meant to be showing, and the stack measures 28°.
+        // paper stack is now a third: it tips its whole clipped sheaf to a 40°
+        // reading slope and measures 12°, down from the 28° it read while the
+        // page lay flat on the desk.
+        //
+        // 32° IS STILL THE CEILING AND IS NOW DESCRIBING NOTHING, which is
+        // deliberate. It was calibrated against the flat page — eyes about half
+        // a metre up over a page about a third of a metre out, the shallowest a
+        // camera could stand and still read it — and the reason to leave it
+        // where it is rather than tighten it onto the current 12° is that it
+        // bounds what is legible, not what is composed today. A future object
+        // that lies flat and cannot tip gets the same allowance the stack used
+        // to have.
         for (const object of printed) {
             const face = readableFace(object);
             const camera = focusCamera(object, WIDE);
@@ -1338,10 +1460,12 @@ describe('the focus cameras', () => {
         // is how far away the visitor stands.
         //
         // The band is set by the two shots that were never in question, the
-        // monitor at 1.98 and the bench at 2.43, and the other two both stand at
-        // 1.10 — the badge because that is the size scene/badgeCanvas.js drew
-        // its print for, the stack because that is where its body type stops
-        // being readable.
+        // monitor at 1.98 and the bench at 2.43. The badge stands at 1.10,
+        // because that is the size scene/badgeCanvas.js drew its print for, and
+        // the stack at 1.20, because that is where its body type stops being
+        // readable — 0.10 further out than it used to manage, bought by tipping
+        // the page up rather than by giving anything up. @see the stack's own
+        // camera comment in deskObjects.js.
         //
         // THE CEILING MOVED FROM 2.40 TO 2.45, and only because the bench's
         // subject did. This distance is measured to the readable face's centre,
@@ -1451,9 +1575,9 @@ describe('the focus cameras', () => {
     it('centres what it frames, unless an editorial spread needs the room', () => {
         // The objects that carry their own words — the screen and the sheets —
         // are read in the middle of the frame. The two that are described by the
-        // DOM spread beside them (see .artifact-spread, which starts at 52% of
-        // the viewport) have to leave that column clear, so they sit in the left
-        // half instead.
+        // DOM spread beside them (see .artifact-spread, which ends at 48% of
+        // the viewport) have to leave that column clear, so they sit in the
+        // right half instead.
         //
         // Measured on the OBJECT, not on `lookAtOffset`: the aim point is the
         // middle of the frame by definition, and the composition shift is the
@@ -1461,7 +1585,7 @@ describe('the focus cameras', () => {
         for (const object of clickable) {
             const centre = readableFace(object).getWorldPosition(new THREE.Vector3());
             const onScreen = centre.project(focusCamera(object, WIDE));
-            const wants = object.focus.visual === 'artifact' ? 'off to the left' : 'centred';
+            const wants = object.focus.visual === 'artifact' ? 'off to the right' : 'centred';
             const has = Math.abs(onScreen.x) < 0.12 ? 'centred' : (onScreen.x < 0 ? 'off to the left' : 'off to the right');
             expect(`${object.id}: ${has}`).toBe(`${object.id}: ${wants}`);
         }

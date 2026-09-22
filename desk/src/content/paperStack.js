@@ -47,6 +47,21 @@ const TOP_SQUARENESS = 0.18;
 const PAPER_COLOR = '#f7f5f0';
 
 /**
+ * Every part of this object tips up when it is focused, and that is the whole
+ * of the difference from the lanyard.
+ *
+ * scene/partMesh.js collects the parts tagged this way into one child group and
+ * focus/pose.js rotates that group about `anchor.present.pivot` — the badge
+ * stands up on the end of a strap that stays lying on the desk, so only some of
+ * its parts carry the tag. A clipped sheaf has no such part. The clip is what
+ * makes the run rigid, the sheets are what it is clipping, and the focused
+ * pages hang inside the same group (see focus/strategies/sheetStrategy.js's
+ * `stage`), so tipping any subset of it would come apart in the hand. Tagging
+ * everything is therefore not laziness here; it is the object.
+ */
+const LIFTS = 'lift';
+
+/**
  * THE SHEETS LIE FLAT BY ROTATION, NOT BY BEING AUTHORED FLAT, and that is
  * what lets one of them be printed.
  *
@@ -158,6 +173,7 @@ export function buildPaperStack({ sheets, width, depth, seed, print }) {
             // little of the window. A glossier setting here immediately reads
             // as plastic sheet rather than as paper.
             material: { roughness: 0.94, metalness: 0, envMapIntensity: 0.75 },
+            pose: LIFTS,
             ...(isTop && print ? { sheet: print } : {})
         });
     }
@@ -174,7 +190,8 @@ export function buildPaperStack({ sheets, width, depth, seed, print }) {
             position: [edgeX + CLIP_REACH / 2, top + CLIP_PLATE / 2, clipZ],
             rotation: [0, 0, 0],
             color: CLIP_COLOR,
-            material: CLIP_MATERIAL
+            material: CLIP_MATERIAL,
+            pose: LIFTS
         },
         // The back of the jaw, wrapping the edge down to the desk.
         {
@@ -183,7 +200,8 @@ export function buildPaperStack({ sheets, width, depth, seed, print }) {
             position: [edgeX - CLIP_PLATE / 2, (top + CLIP_PLATE) / 2, clipZ],
             rotation: [0, 0, 0],
             color: CLIP_COLOR,
-            material: CLIP_MATERIAL
+            material: CLIP_MATERIAL,
+            pose: LIFTS
         },
         // The spring barrel along the fold. A cylinder is modelled up the Y
         // axis, so a quarter turn about X lays it along Z, down the edge.
@@ -198,7 +216,8 @@ export function buildPaperStack({ sheets, width, depth, seed, print }) {
             position: [edgeX - CLIP_PLATE, top - CLIP_BARREL_RADIUS * 0.2, clipZ],
             rotation: [Math.PI / 2, 0, 0],
             color: CLIP_COLOR,
-            material: CLIP_MATERIAL
+            material: CLIP_MATERIAL,
+            pose: LIFTS
         }
     );
 

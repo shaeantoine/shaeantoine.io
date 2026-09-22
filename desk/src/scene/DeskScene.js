@@ -791,11 +791,15 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
      * below its centre for as long as it was raised.
      *
      * `userData.chromeMaxY` is the same argument for the same reason. A focus
-     * strategy that stands its object up — the badge (see artifactStrategy's
-     * `anchor.present`) — changes the object's height for the whole session, so
+     * strategy that stands its object up — the badge (see `anchor.present` and
+     * focus/pose.js) — changes the object's height for the whole session, so
      * it publishes the top it reaches and this box grows to include it. Without
      * that, the arrows flank a card by sitting at its feet. It is set on entry
      * and deleted on exit, so at rest this reads exactly as it did before.
+     *
+     * Only the arrow-stepped visuals set it. The paper stack tips up through
+     * the same field and floats no chrome to be flanked by — it is stepped by
+     * clicking the page itself — so it never publishes one.
      */
     function getObjectScreenBox(id) {
         const group = objectsById.get(id);
