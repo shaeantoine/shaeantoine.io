@@ -1,27 +1,6 @@
-/*
-This file is a repository of software projects.
-
-HARD LENGTH LIMIT, AND IT IS SILENT. These render on the monitor via
-focus/strategies/screenCanvas.js, which lays the body out top-down and stops
-the moment the next line would collide with the link row — `break paragraphs`,
-no warning, no ellipsis. At the display's 1.787 aspect that is roughly eight
-lines, or about 800–900 characters of body once a two-line blurb and a stat
-have taken their share.
-
-So these are deliberately two short paragraphs each. An entry that wants six
-belongs on the paper stack (academia) instead — the constraint is the medium
-telling you which object the writing goes on, which is the whole premise of the
-desk.
-
-Order below is the order the arrows step through. The first entry is what the
-resting screen shows, via scene/idleScreenCanvas.js picking the most recent
-date — so the newest-dated item here is what a visitor sees before they click
-anything. Keep that pointed at whatever is actually current.
-*/
-
 export const continuousSelfImprovement = {
     id: 'software-continuous-self-improvement',
-    title: 'Continuous LLM Self-Improvement',
+    title: 'Continuous Self-Improvement',
     date: '2026-09-13',
     previewImage: '/previews/software-continuous-self-improvement.png',
     blurb: 'What I am working on now: can a model get reliably better without a human in the loop?',
@@ -34,96 +13,10 @@ export const continuousSelfImprovement = {
         }
     ],
     editorial: {
-        credit: 'Shae McKenna',
         body: [
             "Ongoing research into whether a model can improve itself continuously without a human grading every step. The appeal is obvious and so is the trap: a system that generates its own training signal will happily optimise into its own blind spot and report excellent numbers the entire way down.",
             "So the real subject is not generation, it's verification — what a model can check about its own output that is cheaper than producing the output again, and where that check is independent enough to be worth anything. This is the same question my day job runs into from the other side, and I don't think it is solved."
         ],
-        stat: null,
-        quote: null,
-        bio: null,
-        links: []
-    }
-};
-
-export const appleKnowledgeRag = {
-    id: 'software-apple-knowledge-rag',
-    title: 'Retrieval for Apple Knowledge',
-    date: '2026-06-01',
-    previewImage: '/previews/software-apple-knowledge-rag.png',
-    blurb: 'Five micro-services, and four of them exist to catch the first one being wrong.',
-    previewAspect: 'wide',
-    category: 'software',
-    connections: [
-        {
-            workId: 'work-apple-engineer',
-            sentence: 'The longer account of what this cost and what the metric really measures is under the job itself.'
-        }
-    ],
-    editorial: {
-        credit: 'Shae McKenna',
-        body: [
-            "A RAG service making Apple's internal knowledge queryable through the AI tool its employees use. Kafka ingestion, Qdrant, trained embedding and reranker models, synthetic data generation, and an evaluation service — five micro-services, of which retrieval proper is one.",
-            "The shape of that split is the lesson. At a scale where nobody can read the output, the engineering is mostly apparatus for knowing whether you are wrong. The reranker did more for quality than any embedding upgrade, because ordering what you found is cheaper and far more legible than finding more."
-        ],
-        stat: { value: '38,000', label: 'helpline tickets resolved since deployment' },
-        quote: null,
-        bio: null,
-        links: []
-    }
-};
-
-export const scholarshipDatabase = {
-    id: 'software-scholarship-database',
-    title: 'Australia\'s Scholarship Database',
-    date: '2024-11-01',
-    previewImage: '/previews/software-scholarship-database.png',
-    blurb: 'Seven and a half thousand scholarships that already existed and could not be found.',
-    previewAspect: 'tall',
-    category: 'software',
-    connections: [
-        {
-            workId: 'work-inspire-tomorrow',
-            sentence: 'Why I took this on, and what it has to do with my own scholarships, is under the job.'
-        }
-    ],
-    editorial: {
-        credit: 'Shae McKenna',
-        body: [
-            "The largest higher-education scholarship database in Australia: 7,500+ records on AWS, built with two engineers at Inspire Tomorrow Education. Every provider describes eligibility differently and none of them have any reason to publish in a shared format, so the hard part is normalisation, not storage.",
-            "Freshness is the requirement everything else bends around. A listing for a scholarship that closed in March is worse than an empty database, because somebody trusted it and stopped looking. We spent our entire engineering budget on coverage and staleness rather than on anything a user would call a feature."
-        ],
-        stat: { value: '7,500+', label: 'scholarships indexed' },
-        quote: null,
-        bio: null,
-        links: []
-    }
-};
-
-export const hackathons = {
-    id: 'software-hackathons',
-    title: 'Four Weekends',
-    date: '2024-08-01',
-    previewImage: '/previews/software-hackathons.png',
-    blurb: 'Three firsts and a third, and what forty-eight hours is actually good for.',
-    previewAspect: 'square',
-    category: 'software',
-    connections: [
-        {
-            workId: 'work-nextgen',
-            sentence: 'A weekend build and a pitch deck fail in exactly the same way, which is worth knowing before you fund one.'
-        }
-    ],
-    editorial: {
-        credit: 'Shae McKenna',
-        body: [
-            "SafetyCulture AI Accelerator, first, 2023 — extended their production codebase to save clients around 5,000 hours a year. DS&AI Association of Australia, first, 2023 — a multimodal trading algorithm, at the largest hackathon in the southern hemisphere. Tibra Capital, first, 2024 — an ensemble XGBoost and ARIMA price predictor. Stanford, third, 2024 — a consumer-to-consumer compute sharing model.",
-            "What a weekend is genuinely good for is finding out whether an idea has a demo in it. What it is not good for is anything downstream of that, which is most of the work. Three of these four would not survive contact with a real user, and I'd say the SafetyCulture one is the only one that counts, because it shipped into something that already existed."
-        ],
-        stat: { value: '3 × 1st', label: 'and one third place, across four hackathons' },
-        quote: null,
-        bio: null,
-        links: []
     }
 };
 
@@ -142,15 +35,10 @@ export const mlx = {
         }
     ],
     editorial: {
-        credit: 'Shae McKenna',
         body: [
             "Contributions to MLX, Apple's array framework for machine learning on Apple silicon. I also use it professionally, which puts me in the unusual position of filing against a framework whose behaviour I depend on and can actually go and change.",
             "The reason I care about this one is unified memory. Most ML tooling is built on the assumption that moving data to and from the accelerator is the expensive part, and a great deal of accumulated framework design exists to hide that cost. Take the assumption away and a surprising amount of received wisdom stops being true."
         ],
-        stat: null,
-        quote: null,
-        bio: null,
-        links: []
     }
 };
 
@@ -169,23 +57,64 @@ export const catchTheDot = {
         }
     ],
     editorial: {
-        credit: 'Shae McKenna',
         body: [
             "A game where you catch a dot. There is no second feature, no roadmap, and nothing about it that would survive a product review.",
             "I keep it here on purpose. Everything else on this desk can justify itself — a metric moved, a paper got written, somebody found a scholarship. This one exists because it was fun on a Sunday, and a portfolio where every single item has a reason is a portfolio by someone who has stopped making things for their own sake."
         ],
-        stat: null,
-        quote: null,
-        bio: null,
-        links: []
+    }
+};
+
+export const hackathons = {
+    id: 'software-hackathons',
+    title: 'Finding a love for building',
+    date: '2024-08-01',
+    previewImage: '/previews/software-hackathons.png',
+    blurb: 'Its not about the code',
+    previewAspect: 'square',
+    category: 'software',
+    connections: [
+        {
+            workId: 'work-nextgen',
+            sentence: 'A weekend build and a pitch deck fail in exactly the same way, which is worth knowing before you fund one.'
+        }
+    ],
+    editorial: {
+        body: [
+            "I didn't like studying software at university. I didn't realize it then but I am extremely opinionated about what I work on. I can be insufferable if I haven't bought into a project. And well there are a lot of boring games, dull file systems and algorithm implementations universities put undergraduates through.",
+            "Then I did a hackathon. I love them. I love the arguing, the time pressure, the inevitable course correction far too close to the deadline. I loved working with a buch of different people, figuring out who should do what and how. It all felt much more real.",
+            "I ended up doing quite a few. I started with university hackathons, then the odd company hackathon and by the end I was pitching to panels of investors at Antler and Stanford. What I loved most about hackathons was how little, in fact, they often cared about the technology. It was the story you told, the problem you solved, the thing you deemed worthy of pursuing even before a single line was written.",
+            "I learnt a lot about myself during those late nights. I won a lot of hackathons but I don't think I ever necessarily produced the highest quality code or most sophisticated demo. But I could tell a hell of a story. I could find something worth while to work on. Thats the thing I care about with technology, what the hell is worthy of solving."
+        ],
+    }
+};
+
+export const financialModelling = {
+    id: 'software-financial-modelling',
+    title: 'How Does Mathematical Modelling Hold Up',
+    date: '2019-09-13',
+    previewImage: '/previews/software-continuous-self-improvement.png',
+    blurb: 'Humans are messy but using the tools of science to approximate human dynamics is wonderful',
+    previewAspect: 'wide',
+    category: 'software',
+    connections: [
+        {
+            workId: 'academia-medical-education',
+            sentence: 'A model that cannot tell when it is wrong is the thing that makes it dangerous to teach with.'
+        }
+    ],
+    editorial: {
+        body: [
+            "I loved economics in high school. I studied as much economics as I could from economic history, development economics and financial economics. I realized quite quickly that advanced economics heavily relied on mathematics. And so, I began to take maths seriously (even competing in IMO!).",
+            "When I was 16, I came across the concept of Geometric Brownian Motion to model stock prices. But I was skeptical of its uses. Academic economics can be overzealous with it's applicability. I wanted to know how well the assumptions of GBM hold up with real world data.",
+            "Unsurprisingly the data didn't satisfy the assumptions of the model. These results defined how I look at the tools of science in the world of humans. These tools can be useful however, what I came to appreciate is that the space between mathematical elegance and human chaos is beautiful."
+        ],
     }
 };
 
 export const software = [
     continuousSelfImprovement,
-    appleKnowledgeRag,
     mlx,
-    scholarshipDatabase,
+    catchTheDot,
     hackathons,
-    catchTheDot
+    financialModelling
 ];

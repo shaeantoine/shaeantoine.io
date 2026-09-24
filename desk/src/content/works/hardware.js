@@ -1,30 +1,3 @@
-/*
-This file is a repository of hardware projects.
-
-Every hardware work needs an `artifact`: the object that represents it on the
-desk. Focusing the hardware object and stepping swaps these in and out on the
-spot the soldering station stands on, so the desk itself is the only surface
-the project is presented through.
-
-    artifact: { modelUrl: '/models/thing.glb', targetSize: 0.5, rotation: [0, 0.4, 0] }
-
-The first work's artifact must be the same model the desk object rests as (see
-deskObjects.js) — validateDeskLayout enforces it — so entering focus changes
-nothing until an arrow is pressed. `targetSize` is the largest bounding-box
-dimension in world units; keep the set in true proportion to each other, since
-they are seen in the same place one after the other.
-
-    ⚠ THE EEG ENTRY IS SHOWING THE WRONG OBJECT. There is no headset model in
-    desk/models-src, so it currently rests as the soldering station it was
-    built on. That is a stand-in, not a decision. When a real headset .glb
-    exists, drop it in models-src, point `modelUrl` at it, and move the
-    soldering station to whichever entry should hold the desk's resting slot —
-    the layout validator will tell you immediately if those two disagree.
-
-Unlike the monitor, these have no length limit: the text renders as real DOM
-beside the object (panel/ArtifactSpreadView.js), not as a canvas texture.
-*/
-
 export const eegHeadset = {
     id: 'hardware-eeg-headset',
     title: 'An EEG Headset That Classifies On-Device',
@@ -45,7 +18,6 @@ export const eegHeadset = {
         }
     ],
     editorial: {
-        credit: 'Shae McKenna',
         body: [
             "A miniature EEG built on a Teensy 4.1 in C++ and Python, with a quantized 1D CNN running on-device to classify the signal — inside 8MB of RAM.",
             "The 8MB is the entire story and I'd rather talk about it than about the neuroscience. A constraint that hard removes almost every choice you would otherwise agonise over. There is no room for a framework, so there is no framework. There is no room to keep a buffer you might want later, so the signal processing has to be genuinely streaming rather than nominally streaming. Quantization stops being an optimisation you apply at the end and becomes a property the architecture is designed around from the first line. I have never written cleaner code than when I could not afford to write any more of it.",
@@ -53,10 +25,6 @@ export const eegHeadset = {
             "I'll be straight about what this is: a hobbyist EEG is not a medical instrument, the electrode contact is the limiting factor rather than the classifier, and the classes it can separate are coarse. I'm not claiming to read minds on a microcontroller. What I got out of it was a genuine feel for the full stack of one signal — from an electrode with terrible impedance, through filtering, into a quantized model, and out as a decision — with nobody's abstraction in between.",
             "Building a thing that reads your own brain is also just a strange act, and I'd recommend it on those grounds alone. There is a specific moment where the classifier fires because of something you did deliberately with your own head, and it is unlike any other kind of working software."
         ],
-        stat: { value: '8MB', label: 'of RAM holding the entire quantized classifier' },
-        quote: null,
-        bio: null,
-        links: []
     }
 };
 
@@ -76,7 +44,6 @@ export const customRom = {
         }
     ],
     editorial: {
-        credit: 'Shae McKenna',
         body: [
             "I extended the LineageOS ROM with a data collection kernel written in Zig, to build a digital twin of myself from my own phone.",
             "\"Digital twin\" is a big phrase and it deserves unpacking, because it sounds like a product and it isn't one. What I mean is narrow: a model of my own behaviour, built from my own telemetry, that lives on hardware I control. Not a profile that someone sells, and not a feature. The premise is that the most accurate dataset about me is already being collected continuously — it is simply being collected by other people, and I get back a worse version of it in the form of recommendations.",
@@ -85,10 +52,6 @@ export const customRom = {
             "The honest status: this is a personal device running personal software, and I would not hand it to anybody else. A custom ROM with a kernel component you wrote yourself is a security posture, and mine is \"I am the only user and I accept it.\" The twin is early. What I have so far is the collection layer and enough of a model to know the idea is sound.",
             "I think the general version of this matters more than my phone does. The default arrangement is that the richest model of your behaviour is owned by whoever has the best telemetry, and that is never you. It does not have to be that way, and it is worth knowing what it takes to change it even at the scale of one person and one handset."
         ],
-        stat: null,
-        quote: null,
-        bio: null,
-        links: []
     }
 };
 
