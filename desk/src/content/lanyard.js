@@ -172,7 +172,7 @@ const LIFTS = 'lift';
  * @returns {{ parts: object[] }} an `artifact` for a Work, and equally the
  *          `parts` of a desk object — the two shapes are the same on purpose.
  */
-export function buildLanyard({ org, role, cardColor, strapColor, accent, access, year }) {
+export function buildLanyard({ org, role, cardColor, accent, access, year }) {
     const parts = [
         // The holder, under the card and standing a few millimetres proud of
         // it on every side. Rigid PVC rather than the soft wallet kind: low

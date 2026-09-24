@@ -68,7 +68,6 @@ export function buildArtifactSpreadHtml(work, { index, total }) {
         <p class="spread-eyebrow">${kicker}${counter}</p>
         <h2 class="spread-title">${work.title}</h2>
         ${buildMetaHtml(work)}
-        <p class="spread-blurb">${work.blurb}</p>
         <hr class="spread-rule">
         <div class="spread-body">${editorial.body.map((paragraph) => `<p>${paragraph}</p>`).join('')}</div>
         ${buildStatHtml(editorial.stat)}

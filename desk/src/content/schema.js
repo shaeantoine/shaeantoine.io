@@ -26,14 +26,13 @@ const REQUIRED_FIELDS = [
     'title',
     'date',
     'previewImage',
-    'blurb',
     'previewAspect',
     'category',
     'connections',
     'editorial'
 ];
 
-const REQUIRED_EDITORIAL_FIELDS = ['credit', 'body'];
+const REQUIRED_EDITORIAL_FIELDS = ['body'];
 
 const VALID_PREVIEW_ASPECTS = ['wide', 'tall', 'square'];
 
