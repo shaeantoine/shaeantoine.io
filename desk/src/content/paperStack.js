@@ -47,14 +47,14 @@ const TOP_SQUARENESS = 0.18;
 const PAPER_COLOR = '#f7f5f0';
 
 /**
- * Every part of this object tips up when it is focused.
+ * Every part of this object tipped up when the original site focused it.
  *
  * scene/partMesh.js collects the parts tagged this way into one child group and
- * focus/pose.js rotates that group about `anchor.present.pivot`. Tagging all of
- * them is not laziness: the clip is what makes the run rigid, the sheets are
- * what it is clipping, and the focused pages hang inside the same group (see
- * focus/strategies/sheetStrategy.js's `stage`), so tipping any subset of it
- * would come apart in the hand.
+ * the original site's focus/pose.js rotated that group about
+ * `anchor.present.pivot`. Tagging all of them is not laziness: the clip is what
+ * makes the run rigid, the sheets are what it is clipping, and the focused
+ * pages hung inside the same group (its sheetStrategy's `stage`), so tipping
+ * any subset of it would have come apart in the hand.
  *
  * The badge tags everything too, for its own reason — the clip it stands on is
  * part of the assembly. The partial pose the group mechanism was built for had
@@ -94,7 +94,7 @@ const FLAT = -Math.PI / 2;
 // down), and a clip there covers the one part of this object that has to be
 // legible from the establishing shot.
 //
-// THE CLIP IS ALSO THE HINGE. focus/strategies/sheetStrategy.js turns the top
+// THE CLIP IS ALSO THE HINGE. The original site's sheetStrategy turned the top
 // sheet by pivoting it on this edge and sweeping it left, which is what a
 // clipped run of paper physically does — a stack clipped down one side cannot
 // be flipped over its top, and putting the fastener and the pivot in two

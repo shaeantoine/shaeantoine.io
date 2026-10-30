@@ -1,16 +1,12 @@
-# assembled by scripts/build.sh and never committed
 node_modules/
 
-# Unprocessed desk assets
+# Unprocessed desk assets (the scripts in desk/scripts turn these into desk/assets)
 desk/art-src
 desk/models-src
 desk/textures-src
 
-# Desk projet .vite
+# Vite's cache
 desk/.vite
-
-# assembled build output
-.build/
 
 # Mac files
 .DS_Store

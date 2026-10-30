@@ -8,9 +8,9 @@
  * them are guesses made on one machine. Nothing here ever measured what a
  * visitor's machine actually delivered, which meant a scene running at 20 fps
  * on a mid-range laptop was indistinguishable, from inside the code, from one
- * running at 120 on an M-series Mac. THE_DESK_DESIGN.md asks for the desk to
- * stay "usable on mid-range hardware"; this is the first thing in the project
- * that can tell whether it is.
+ * running at 120 on an M-series Mac. The desk is meant to stay usable on
+ * mid-range hardware; this is the first thing in the project that can tell
+ * whether it is.
  *
  * WHAT IT MEASURES, AND WHY THAT PARTICULAR THING. The interval between
  * consecutively rendered frames — not the wall time of `composer.render()`,

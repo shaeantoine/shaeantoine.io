@@ -4,8 +4,6 @@ export const appleEngineer = {
     id: 'work-apple-engineer',
     title: 'Software Engineer, Apple',
     date: 'January 2025',
-    previewImage: '/previews/work-apple-engineer.png',
-    previewAspect: 'wide',
     category: 'work',
     artifact: buildLanyard({ org: 'Apple', role: 'Software Engineer', cardColor: '#e9e6e0', access: 'EMPLOYEE', year: '2025' }),
     connections: [
@@ -27,8 +25,6 @@ export const inspireTomorrow = {
     id: 'work-inspire-tomorrow',
     title: 'Chief Technology Officer, Inspire Tomorrow Education',
     date: 'February 2024 - December 2024',
-    previewImage: '/previews/work-inspire-tomorrow.png',
-    previewAspect: 'tall',
     category: 'work',
     artifact: buildLanyard({ org: 'Inspire Tomorrow', role: 'CTO', cardColor: '#d9e0e6', access: 'STAFF', year: '2024' }),
     connections: [
@@ -51,8 +47,6 @@ export const nextGen = {
     id: 'work-nextgen',
     title: 'Investment Principal, NextGen Ventures',
     date: 'January 2024 - January 2025',
-    previewImage: '/previews/work-nextgen.png',
-    previewAspect: 'wide',
     category: 'work',
     artifact: buildLanyard({ org: 'NextGen Ventures', role: 'Investment Principal', cardColor: '#e4dcd2', access: 'STAFF', year: '2024' }),
     connections: [
@@ -75,8 +69,6 @@ export const deloitte = {
     id: 'work-deloitte',
     title: 'Quantitative Analyst Intern, Deloitte',
     date: 'December 2023 - February 2024',
-    previewImage: '/previews/work-deloitte.png',
-    previewAspect: 'wide',
     category: 'work',
     artifact: buildLanyard({ org: 'Deloitte', role: 'Quant Analyst', cardColor: '#dfe3d9', access: 'INTERN', year: '2023' }),
     connections: [
@@ -99,8 +91,6 @@ export const appleIntern = {
     id: 'work-apple-intern',
     title: 'Software Engineer Intern, Apple',
     date: 'February 2023 - August 2023',
-    previewImage: '/previews/work-apple-intern.png',
-    previewAspect: 'square',
     category: 'work',
     artifact: buildLanyard({ org: 'Apple', role: 'SWE Intern', cardColor: '#dedbd4', access: 'INTERN', year: '2023' }),
     connections: [
@@ -126,8 +116,6 @@ export const amazon = {
     id: 'work-amazon',
     title: 'Growth Intern, Amazon',
     date: 'December 2022 - February 2023',
-    previewImage: '/previews/work-amazon.png',
-    previewAspect: 'square',
     category: 'work',
     artifact: buildLanyard({ org: 'Amazon', role: 'Growth Intern', cardColor: '#e8ded0', access: 'INTERN', year: '2022' }),
     connections: [
@@ -145,5 +133,5 @@ export const amazon = {
     }
 };
 
-/** Desk order: the lanyard cycles in this sequence with most recent role first. */
+/** Desk order, most recent role first: the original site's lanyard cycled through them in this sequence. */
 export const workExperience = [appleEngineer, inspireTomorrow, nextGen, deloitte, appleIntern, amazon];

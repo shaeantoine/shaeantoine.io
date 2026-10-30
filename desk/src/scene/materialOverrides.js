@@ -84,8 +84,8 @@ const ALLOW_REFRACTIVE_TRANSMISSION = false;
  * price is paid per frame for as long as one transmissive material is in view.
  *
  * soldering_station.glb ships exactly one: a material named `Glass`, at
- * `transmissionFactor: 1`. It sits on the desk, so it is in view at the
- * establishing shot and in view during every dolly — which means the desk was
+ * `transmissionFactor: 1`. It sat on the original site's desk, in view at the
+ * establishing shot and during every dolly — which meant the desk was
  * rendering itself twice, forever, for a refraction nobody can identify on a
  * prop that covers a few hundred pixels.
  *

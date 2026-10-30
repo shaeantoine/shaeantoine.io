@@ -5,14 +5,14 @@ import * as THREE from 'three';
  *
  * WHY THIS EXISTS. Every surface on this desk that shows text rasterises it into
  * a 2D canvas and uploads that as a texture, and each one used to decide for
- * itself how the result should be tagged and filtered. The two paper strategies
- * held byte-identical copies of the same five-line helper, which is exactly how
- * the two of them ended up as the only canvases in the app missing `colorSpace`
- * while `screenStrategy`, `IdleScreen` and `partMesh` all set it. A policy that
- * is stated in six places is a policy that holds in five. Only one of those two
- * strategies is left — `sheetStrategy`, for the paper stack — so this module is
- * now both the single statement of the policy and its only caller, which is the
- * shape it should have had from the start.
+ * itself how the result should be tagged and filtered. On the original site the
+ * two paper strategies held byte-identical copies of the same five-line helper,
+ * which is exactly how the two of them ended up as the only canvases in the app
+ * missing `colorSpace` while `screenStrategy`, `IdleScreen` and `partMesh` all
+ * set it. A policy that is stated in six places is a policy that holds in five.
+ * Those strategies went with the original site; this module is now the single
+ * statement of the policy, and core/draw.js applies it to every canvas texture
+ * the modules make, which is the shape it should have had from the start.
  *
  * THE COLOUR SPACE IS THE PART THAT WAS ACTUALLY BROKEN, and it is worth writing
  * down why, because the failure is silent and looks like a different bug.

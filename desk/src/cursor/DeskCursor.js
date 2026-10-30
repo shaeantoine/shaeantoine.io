@@ -1,4 +1,4 @@
-import { dampedApproach } from '../focus/cursorTilt.js';
+import { dampedApproach } from './cursorTilt.js';
 import { invalidate, invalidateShadows } from '../scene/renderScheduler.js';
 import { echoOffset, yawFromOffset } from './mouseEcho.js';
 
@@ -19,11 +19,12 @@ const MOUSE_OBJECT_ID = 'mouse';
 // THIS IS A DOLLY BUDGET, not a shadow-quality knob. `invalidateShadows()` is
 // the expensive invalidation — it re-renders the key's 2048² depth map — and
 // the echo is the one thing in the scene that moves continuously, so calling it
-// per frame puts that pass on every frame of every camera move. CameraRig goes
-// out of its way to avoid exactly that (`movesGeometry: false`, see tween.js);
-// spending it here from the other side undoes the saving, and the pull-back out
-// of focus is where it showed, because `setActive(true)` re-arms the echo on
-// the same tick the camera starts moving.
+// per frame puts that pass on every frame of every camera move. The camera
+// (core/camera.js, as CameraRig before it) goes out of its way to avoid exactly
+// that (`movesGeometry: false`, see tween.js); spending it here from the other
+// side undoes the saving, and the pull-back out of focus is where it showed,
+// because `setActive(true)` re-arms the echo on the same tick the camera starts
+// moving.
 //
 // The value is in shadow texels. The key is a spot at ~11 units with a 0.3 rad
 // half-angle, so its 2048² map lands ~300 texels per world unit over the desk —

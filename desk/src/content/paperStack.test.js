@@ -163,7 +163,7 @@ describe('buildPaperStack', () => {
     });
 
     it('puts the clip on the left edge, which is what the page turn pivots on', () => {
-        // focus/strategies/sheetStrategy.js hinges the sheet on x = -width/2.
+        // The original site's sheetStrategy hinged the sheet on x = -width/2.
         // A clip anywhere else means paper pivoting about an edge nothing is
         // holding, which is wrong in a way people notice without noticing.
         for (const part of clipOf(build())) {

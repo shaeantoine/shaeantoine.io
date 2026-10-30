@@ -7,12 +7,13 @@ const ESTABLISHING_LOOK_AT = { x: 0, y: 1, z: 0 };
 /**
  * How long a dolly takes, in and out.
  *
- * Exported because it is not only the camera's business: the sheet strategy's
- * approach runs alongside this move and has to land with it, both the lanyard's
- * badge and the paper stack's sheaf come up to meet the camera inside it (see
- * focus/pose.js), and main.js holds its chrome reveal until the rig reports it
- * has settled. One constant, imported, rather than several copies that agree
- * today.
+ * Exported because it is not only the camera's business. On the original site
+ * the sheet strategy's approach ran alongside this move and had to land with it,
+ * both the lanyard's badge and the paper stack's sheaf came up to meet the
+ * camera inside it, and its main.js held the chrome reveal until the rig
+ * reported it had settled. On this site the camera (core/camera.js) and the
+ * modules' motion (core/motion.js) both time themselves against it. One
+ * constant, imported, rather than several copies that agree today.
  *
  * WHY 900 AND NOT 440. The old value was picked to make a click feel answered,
  * and it does — but what it answers with is a cut with some blur on it. Every
@@ -114,14 +115,17 @@ function animateCameraTo(camera, lookAtTarget, toPosition, toLookAt, onComplete,
  * a person leaning over a page rather than a scanner above one, which it can
  * only be because the stack tips up to meet it. One fixed distance can't
  * express that difference, so the offset now comes from the object's own
- * config. Both pairs of figures are what scripts/analyze-focus-cameras.mjs
- * prints for those two objects.
+ * config. Both pairs of figures were measured off those two objects' shots.
  *
  * The offsets are world-space vectors and they translate with the object but do
  * NOT rotate with it: `focusOn` adds them componentwise to the world position
  * DeskScene reports, which is the object group's origin, a point the group's own
  * yaw does not move. So respacing the desk costs nothing here; changing a yaw
  * invalidates every shot on that object.
+ *
+ * From the original site: nothing calls createCameraRig now. The site's camera
+ * is core/camera.js, which restates this rig's establishing shot and opening
+ * move through core/framing.js.
  */
 export function createCameraRig(camera) {
     const lookAtTarget = { ...ESTABLISHING_LOOK_AT };
@@ -131,7 +135,8 @@ export function createCameraRig(camera) {
     let cancelCurrent = null;
     // Screen-space chrome pinned to an object can't be placed meaningfully
     // while the view matrix is still changing under it, so callers get to ask
-    // whether the shot has settled. See main.js's arrow reveal.
+    // whether the shot has settled — the original site's main.js held its
+    // focus arrows back until it had.
     let moving = false;
 
     function settle() {

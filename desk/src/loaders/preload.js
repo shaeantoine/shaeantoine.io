@@ -14,9 +14,11 @@ import { SURFACE_SOURCES, SURFACE_MAPS } from '../scene/surfaces.js';
  * cascade — the desk appears, then the room snaps into existence underneath it
  * when the desk's height finally reports the floor, then the monitor, then the
  * books, then a beat later the carpet changes texture, then the walls, then
- * each poster lights up in whatever order the network felt like. Twenty-three
- * files — eight models and fifteen textures, the count the manifest below
- * derives — twenty-three separate moments of the page changing.
+ * each poster lights up in whatever order the network felt like. On the
+ * original site that was twenty-three files — eight models and fifteen
+ * textures — twenty-three separate moments of the page changing. (Today's
+ * layout leaves out the soldering station and the old keyboard, so the
+ * manifest below derives six models.)
  *
  * No amount of per-asset polish fixes that, because the problem is not how any
  * one object arrives — it is that there was never a point in time at which the
@@ -26,10 +28,10 @@ import { SURFACE_SOURCES, SURFACE_MAPS } from '../scene/surfaces.js';
  * hand, and the whole room resolves inside a single tick.
  *
  * WHAT IS DELIBERATELY NOT IN HERE. Anything a visitor reaches by clicking: the
- * hardware bench's swappable project models, a work's preview image. Those are
- * fetched by their focus strategies on demand, which is right — they are not
- * part of the first impression, and pulling them forward would hold the veil up
- * for assets most visits never see.
+ * bench's phone model, the photos on the box's prints and the papers. The
+ * modules load those themselves (loaders/gltf.js, core/media.js), which is
+ * right — they are not part of the first impression, and listing them here
+ * would hold the veil up for assets most visits never see.
  */
 
 /**

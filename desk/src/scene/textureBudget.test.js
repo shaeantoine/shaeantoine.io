@@ -12,7 +12,7 @@ describe('footprintScaleFor', () => {
     const BUFFER = 1890;
 
     // The monitor's focused readout and one sheet of the academic paper stack,
-    // as printed by `node scripts/analyze-focus-cameras.mjs`. The page pair used
+    // as measured off their focus cameras. The page pair used
     // to be the essay notebook's leaf ([1008, 1400] at framing [0.47, 0.505]);
     // it was re-taken from the paper stack when that object was removed, because
     // a fixture named after a surface that no longer exists is the kind of thing

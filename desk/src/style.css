@@ -1,29 +1,16 @@
 :root {
     color-scheme: light;
 
-    --color-primary: #141414;
     --color-on-primary: #FAFAFA;
     --color-canvas: #FAFAFA;
     --color-surface: #FFFFFF;
-    --color-surface-hover: #F0F0ED;
     --color-ink: #141414;
     --color-body: #6E6E6A;
     --color-hairline: rgba(20, 20, 20, 0.08);
     --color-scrim: rgba(0, 0, 0, 0.45);
     --color-modal-scrim: rgba(20, 20, 20, 0.55);
-    --color-ambient-light: #FFF3E4;
 
     --font-family: 'Inter', sans-serif;
-
-    --font-display-size: 36px;
-    --font-display-weight: 560;
-    --font-display-line-height: 1.05;
-    --font-display-tracking: -0.02em;
-
-    --font-h1-size: 36px;
-    --font-h1-weight: 550;
-    --font-h1-line-height: 1.1;
-    --font-h1-tracking: -0.015em;
 
     --font-eyebrow-size: 13px;
     --font-eyebrow-weight: 500;
@@ -31,43 +18,18 @@
     --font-eyebrow-tracking: 0.02em;
 
     --font-body-md-size: 15px;
-    --font-body-md-weight: 400;
-    --font-body-md-line-height: 1.5;
-
-    --font-editorial-body-size: 17px;
-    --font-editorial-body-weight: 400;
-    --font-editorial-body-line-height: 1.7;
-
-    --font-quote-size: 20px;
-    --font-quote-weight: 450;
-    --font-quote-line-height: 1.4;
-    --font-quote-tracking: -0.01em;
 
     --font-label-sm-size: 12px;
     --font-label-sm-weight: 500;
     --font-label-sm-line-height: 1.2;
 
-    --radius-sm: 8px;
-    --radius-default: 12px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
     --radius-pill: 9999px;
 
-    --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
     --space-lg: 24px;
-    --space-xl: 40px;
-    --space-canvas-gap: 64px;
-    --space-section: 96px;
 
     --header-height: 72px;
-
-    /* Overwritten by main.js from SPREAD_FADE_MS, which is itself derived from
-       artifactStrategy's SWAP_MS. The value here is only what applies for the
-       frames before the module runs; the relationship is owned in JS, because
-       it is a choreography constraint rather than a style choice. */
-    --spread-fade: 150ms;
 }
 
 * { box-sizing: border-box; }
@@ -139,8 +101,6 @@ html, body {
 
 .nav-link:hover { color: var(--color-ink); }
 
-.nav-link-active { color: var(--color-primary); }
-
 .loading-veil {
     position: fixed;
     inset: 0;
@@ -154,7 +114,7 @@ html, body {
        canvas-white over a lit room, so a quick fade reads as the page snapping
        on; drawn out to 700 ms with most of the change in the first third, the
        room surfaces through it instead. Runs against the camera's 1800 ms
-       push-in (see INTRO_OFFSET in scene/CameraRig.js) and finishes well inside
+       push-in (see INTRO_OFFSET in core/framing.js) and finishes well inside
        it on purpose — the move should still be going when the dissolve ends. */
     transition: opacity 700ms cubic-bezier(0.33, 0, 0.2, 1);
 }
@@ -261,488 +221,6 @@ html, body {
 .focus-vignette[hidden] { display: none; }
 .focus-vignette.visible { opacity: 0.6; }
 
-.focus-panel {
-    position: fixed;
-    z-index: 70;
-    width: min(420px, 88vw);
-    max-height: 70vh;
-    background: var(--color-canvas);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 24px 60px rgba(20, 20, 20, 0.2);
-    padding: var(--space-lg);
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-.focus-panel[hidden] { display: none; }
-.focus-panel:not([hidden]) { opacity: 1; transform: translateY(0); }
-
-.focus-panel-scroll {
-    max-height: calc(70vh - 2 * var(--space-lg));
-    overflow-y: auto;
-}
-
-.focus-panel-close {
-    position: absolute;
-    top: var(--space-sm);
-    right: var(--space-sm);
-    width: 2rem;
-    height: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-surface);
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-pill);
-    color: var(--color-body);
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.focus-panel-close:hover {
-    color: var(--color-ink);
-    border-color: var(--color-ink);
-}
-
-.focus-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 2.5rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-pill);
-    background: var(--color-surface);
-    border: 1px solid var(--color-hairline);
-    color: var(--color-ink);
-    font-size: 1.4rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.focus-arrow[data-arrow="prev"] { left: calc(-1.25rem - 8px); }
-.focus-arrow[data-arrow="next"] { right: calc(-1.25rem - 8px); }
-.focus-arrow:disabled { opacity: 0.3; cursor: default; }
-
-.screen-arrow {
-    position: fixed;
-    z-index: 60;
-    transform: translate(-50%, -50%);
-    width: 2.75rem;
-    height: 2.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-pill);
-    background: var(--color-surface);
-    border: 1px solid var(--color-hairline);
-    color: var(--color-ink);
-    font-size: 1.5rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-    opacity: 0;
-}
-
-.screen-arrow[hidden] { display: none; }
-/* Faded up only once the focus dolly has settled and main.js has placed them,
-   so the arrives-in-position reveal never animates a moving target. The
-   disabled rule is scoped to .visible so it can't outrank the hidden state. */
-.screen-arrow.visible { opacity: 1; }
-.screen-arrow.visible:disabled { opacity: 0.3; cursor: default; }
-
-.focus-index {
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    color: var(--color-body);
-    margin: 0 0 var(--space-sm);
-}
-
-.connection-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-hairline);
-}
-
-.connection-chip {
-    background: var(--color-surface);
-    color: var(--color-body);
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: var(--space-sm) var(--space-md);
-    text-align: left;
-    cursor: pointer;
-    font-size: var(--font-body-md-size);
-    line-height: var(--font-body-md-line-height);
-    transition: color 0.2s ease, background-color 0.2s ease;
-}
-
-.connection-chip:hover { background: var(--color-surface-hover); color: var(--color-ink); }
-
-.editorial-kicker {
-    margin: 0 0 var(--space-sm);
-    font-size: var(--font-eyebrow-size);
-    font-weight: var(--font-eyebrow-weight);
-    line-height: var(--font-eyebrow-line-height);
-    letter-spacing: var(--font-eyebrow-tracking);
-    color: var(--color-body);
-    text-transform: uppercase;
-}
-
-.editorial-title {
-    font-size: var(--font-h1-size);
-    font-weight: var(--font-h1-weight);
-    line-height: var(--font-h1-line-height);
-    letter-spacing: var(--font-h1-tracking);
-    color: var(--color-ink);
-    margin: 0 0 var(--space-md);
-}
-
-.editorial-credit {
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    color: var(--color-body);
-    margin: 0 0 var(--space-lg);
-}
-
-.stat-block {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: var(--space-lg);
-}
-
-.stat-value {
-    font-size: var(--font-h1-size);
-    font-weight: var(--font-h1-weight);
-    line-height: var(--font-h1-line-height);
-    color: var(--color-ink);
-}
-
-.stat-label {
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    color: var(--color-body);
-}
-
-p.editorial-body {
-    font-size: var(--font-body-md-size);
-    font-weight: var(--font-body-md-weight);
-    line-height: var(--font-body-md-line-height);
-    color: var(--color-body);
-    margin: 0 0 var(--space-md);
-}
-
-.quote-block {
-    background: var(--color-surface-hover);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    margin-top: var(--space-lg);
-    margin-bottom: var(--space-lg);
-}
-
-.quote-block p {
-    font-size: var(--font-body-md-size);
-    font-weight: 450;
-    line-height: var(--font-body-md-line-height);
-    color: var(--color-ink);
-    margin: 0 0 var(--space-sm);
-}
-
-.quote-block cite {
-    font-size: var(--font-label-sm-size);
-    color: var(--color-body);
-    font-style: normal;
-}
-
-.bio-card {
-    background: var(--color-surface-hover);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    font-size: var(--font-body-md-size);
-    line-height: var(--font-body-md-line-height);
-    color: var(--color-body);
-    margin-bottom: var(--space-lg);
-}
-
-.link-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-lg);
-}
-
-.link-pill {
-    background: var(--color-surface);
-    color: var(--color-primary);
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    text-decoration: none;
-    border-radius: var(--radius-pill);
-    padding: 6px 14px;
-    transition: background-color 0.2s ease;
-}
-
-.link-pill:hover { background: var(--color-surface-hover); }
-
-/* ── Artifact spread ──────────────────────────────────────────
-   The hardware object's text, set as a column beside it rather than in a
-   panel over it. Anchored to the viewport rather than to the object's
-   screen-space box: the arrows are controls *for* the object and belong
-   pinned to it, but a reading measure that reflowed as the camera moved
-   would be worse than one that simply holds still. The focus camera is aimed
-   to leave the left of the frame clear (see deskObjects.js).
-
-   THE COLUMN USED TO SIT ON THE RIGHT, and the reason it moved is what is
-   behind it rather than anything about the column itself. Both objects that
-   carry a spread stand on the desk's left flank, so swinging them into the
-   left half put the text over the middle of the desk — the display, the
-   keyboard, the rest of the clutter — which is the busiest part of the frame
-   and the one part of it that also contains type. Mirroring the whole
-   arrangement sets the words against the bare left edge of the desk instead. */
-
-/* The falloff the type is read against — a broad directional gradient rather
-   than a filled panel, so there is no edge anywhere and it reads as the scene
-   dropping into shadow rather than as a card laid over it.
-   
-   This is also what settles a fight the spread was losing. The focus vignette
-   darkens everything past 40% of the frame's radius, and the column sits from
-   5% to at most 42% across — so near-black ink was being set on a backdrop the
-   vignette was busy pushing toward near-black too, over the high-frequency
-   detail of the rest of the desk. Committing to the dark and inverting the
-   type turns that from a problem into the thing that makes it legible.
-
-   Masked off at the top so it doesn't reach under the site header, whose nav
-   links are dark and sit above this in the stack. */
-.artifact-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 45; /* over the vignette, under the arrows and the text */
-    pointer-events: none;
-    background: linear-gradient(
-        to left,
-        transparent 34%,
-        rgba(16, 15, 14, 0.44) 62%,
-        rgba(16, 15, 14, 0.74) 100%
-    );
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 100%);
-    opacity: 0;
-    transition: opacity var(--spread-fade) ease;
-}
-
-.artifact-scrim[hidden] { display: none; }
-.artifact-scrim.visible { opacity: 1; }
-
-.artifact-spread {
-    /* Read against the scrim above, so the whole column inverts. Kept as
-       local custom properties rather than added to :root — the palette has no
-       on-dark tokens because nothing else in the app is set on dark, and
-       flipping this back later should be a four-line change in one place. */
-    --spread-ink: var(--color-on-primary);
-    --spread-body: rgba(250, 250, 250, 0.74);
-    --spread-hairline: rgba(250, 250, 250, 0.2);
-    --spread-surface: rgba(250, 250, 250, 0.09);
-
-    position: fixed;
-    z-index: 65;
-    top: 50%;
-    left: 5vw;
-    /* 58 AND 27rem ARE THE SAME DECISION MADE FOR TWO WINDOW SIZES. Above
-       about 1200px the max-width binds and the percentage does nothing; below
-       it the percentage binds and the max-width does nothing. At 52% / 30rem
-       the column ran to 48% of a 1100px window, which put it within 3% of the
-       object and left the prev arrow nowhere to stand. Both were pulled in by
-       the same amount so the gap does not depend on how wide the window is. */
-    right: 58%;
-    max-width: 27rem;
-    transform: translateY(-50%);
-    max-height: 74vh;
-    overflow-y: auto;
-    opacity: 0;
-    /* Driven by SPREAD_FADE_MS in main.js — the two halves of this crossfade
-       are timed to land inside the object's own swap. */
-    transition: opacity var(--spread-fade) ease;
-    /* Insurance, not the mechanism: the gradient does the work, and this only
-       has to hold up the few glyphs that land where it is weakest. Tight
-       enough not to read as a glow. */
-    text-shadow: 0 1px 3px rgba(10, 9, 8, 0.55);
-}
-
-.artifact-spread[hidden] { display: none; }
-.artifact-spread.visible { opacity: 1; }
-
-.spread-eyebrow {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-md);
-    margin: 0 0 var(--space-sm);
-    font-size: var(--font-eyebrow-size);
-    font-weight: var(--font-eyebrow-weight);
-    line-height: var(--font-eyebrow-line-height);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--spread-body);
-}
-
-.spread-count { font-variant-numeric: tabular-nums; }
-
-.spread-title {
-    margin: 0;
-    font-size: var(--font-display-size);
-    font-weight: var(--font-display-weight);
-    line-height: var(--font-display-line-height);
-    letter-spacing: var(--font-display-tracking);
-    color: var(--spread-ink);
-}
-
-.spread-meta {
-    margin: var(--space-sm) 0 0;
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    color: var(--spread-body);
-}
-
-.spread-blurb {
-    margin: var(--space-md) 0 0;
-    font-size: var(--font-quote-size);
-    font-weight: var(--font-quote-weight);
-    line-height: var(--font-quote-line-height);
-    letter-spacing: var(--font-quote-tracking);
-    color: var(--spread-ink);
-}
-
-.spread-rule {
-    margin: var(--space-lg) 0;
-    border: 0;
-    border-top: 1px solid var(--spread-hairline);
-}
-
-.spread-body p {
-    margin: 0 0 var(--space-md);
-    font-size: var(--font-editorial-body-size);
-    font-weight: var(--font-editorial-body-weight);
-    line-height: var(--font-editorial-body-line-height);
-    color: var(--spread-body);
-}
-
-.spread-body p:last-child { margin-bottom: 0; }
-
-.spread-stat {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-sm);
-    margin: var(--space-lg) 0 0;
-}
-
-.spread-stat-value {
-    font-size: var(--font-h1-size);
-    font-weight: var(--font-h1-weight);
-    line-height: var(--font-h1-line-height);
-    letter-spacing: var(--font-h1-tracking);
-    color: var(--spread-ink);
-}
-
-.spread-stat-label {
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    color: var(--spread-body);
-}
-
-.spread-quote {
-    margin: var(--space-lg) 0 0;
-    padding: var(--space-lg);
-    background: var(--spread-surface);
-    border-radius: var(--radius-md);
-}
-
-.spread-quote p {
-    margin: 0;
-    font-size: var(--font-quote-size);
-    font-weight: var(--font-quote-weight);
-    line-height: var(--font-quote-line-height);
-    color: var(--spread-ink);
-}
-
-.spread-quote cite {
-    display: block;
-    margin-top: var(--space-sm);
-    font-size: var(--font-label-sm-size);
-    font-style: normal;
-    color: var(--spread-body);
-}
-
-.spread-links,
-.spread-connections {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-}
-
-/* Outlined rather than filled: a white pill on this backdrop would be the
-   brightest thing in the frame, louder than the object it belongs to. */
-.spread-link,
-.spread-connection {
-    padding: 6px 14px;
-    background: transparent;
-    border: 1px solid var(--spread-hairline);
-    border-radius: var(--radius-pill);
-    color: var(--spread-ink);
-    font-family: inherit;
-    font-size: var(--font-label-sm-size);
-    font-weight: var(--font-label-sm-weight);
-    text-decoration: none;
-    text-shadow: inherit;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.spread-link:hover,
-.spread-connection:hover {
-    background: var(--spread-surface);
-    border-color: var(--spread-ink);
-}
-
-.spread-connection { text-align: left; }
-
-/* Below this the object and a reading measure stop fitting side by side, so
-   the column takes the lower half of the frame instead of the left of it —
-   and the falloff has to turn with it, rising from the bottom edge. */
-@media (max-width: 60rem) {
-    .artifact-scrim {
-        background: linear-gradient(
-            to bottom,
-            transparent 30%,
-            rgba(16, 15, 14, 0.44) 58%,
-            rgba(16, 15, 14, 0.78) 100%
-        );
-        -webkit-mask-image: none;
-        mask-image: none;
-    }
-
-    .artifact-spread {
-        top: auto;
-        bottom: var(--space-xl);
-        left: 5vw;
-        right: 5vw;
-        max-width: none;
-        max-height: 44vh;
-        transform: none;
-    }
-
-    .spread-title { font-size: var(--font-h1-size); }
-}
-
 /* The opening sequence is the one place on this site where motion happens
    without the visitor having asked for it, so it is also the one place that has
    to have an answer for someone who would rather it didn't. The camera's
@@ -754,4 +232,237 @@ p.editorial-body {
     .loading-veil { transition-duration: 200ms; }
     .loading-veil-bar { transition-duration: 100ms; }
     .site-header { transition-delay: 0s; }
+}
+
+/* ===========================================================================
+   The room's own chrome, over the base above: the header's pills, the hint
+   line, the modules' DOM controls. Everything here is quiet on purpose: the
+   room is the page.
+   =========================================================================== */
+
+/* Shae's handwriting: a font traced from photos of it, served from
+   assets/fonts. One weight: declared across the whole range so a
+   canvas asking for 600 or 700 gets the real letters, not a synthesised bold. */
+@font-face {
+    font-family: 'Shae Hand';
+    src: url('/fonts/shae-hand.woff2') format('woff2'), url('/fonts/shae-hand.woff') format('woff');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* --- Header ------------------------------------------------------------- */
+
+/* Light type over the room, the way a title sits over footage. The backdrop
+   under the header runs from the lit wall (rgb ≈ 158 in the lamp's wash at the
+   establishing shot) to the dark shelf and desk (≈ 20–50 in #bench, #monitor/now)
+   and posters in between, so no single ink works; white with a shadow under
+   every glyph, over a soft darkening from the top edge, works on all of them.
+
+   The darkening is a lens vignette: heaviest in the two top corners, where the
+   type is, fading to nothing by ~190 px and barely touching the middle of the
+   frame (the shelf and posters at the establishing shot). Subtle at the desk
+   (0.7), full while a focus shot's vignette is up. */
+.desk-header::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 190px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse min(620px, 86vw) 230px at 0 0,
+            rgba(8, 8, 7, 0.58) 0%, rgba(8, 8, 7, 0.36) 38%, rgba(8, 8, 7, 0.12) 68%, rgba(8, 8, 7, 0) 100%),
+        radial-gradient(ellipse min(460px, 64vw) 210px at 100% 0,
+            rgba(8, 8, 7, 0.5) 0%, rgba(8, 8, 7, 0.3) 38%, rgba(8, 8, 7, 0.1) 68%, rgba(8, 8, 7, 0) 100%),
+        linear-gradient(to bottom,
+            rgba(8, 8, 7, 0.26) 0%, rgba(8, 8, 7, 0.12) 45%, rgba(8, 8, 7, 0.03) 80%, rgba(8, 8, 7, 0) 100%);
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+/* main.js puts the focus vignette up for every module (it is the one signal
+   the page has for "in a focus shot"); the header's vignette follows it. */
+html:has(#focus-vignette.visible) .desk-header::before { opacity: 1; }
+
+.desk-header .site-header-name {
+    color: #fafafa;
+    /* A tight dark edge (what makes small type legible on a busy picture) and a
+       soft halo (a local scrim that moves with the letters). */
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 0, 0, 0.38);
+}
+
+/* The name, and beside it the back pill whenever a part of the room is open. */
+.desk-header-id {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* "Before you go →" and "← back": quiet pills in the hint's language (dark
+   glass, light type), so they read over the lit wall, the posters and the
+   black shelf alike. */
+.desk-header .desk-leave,
+.desk-header .desk-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px 7px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius-pill);
+    background: rgba(20, 20, 20, 0.38);
+    backdrop-filter: blur(8px) saturate(1.1);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    color: #fafafa;
+    font-size: var(--font-eyebrow-size);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.desk-header .desk-leave:hover,
+.desk-header .desk-back:hover {
+    color: #ffffff;
+    background: rgba(20, 20, 20, 0.54);
+    border-color: rgba(255, 255, 255, 0.24);
+}
+
+.desk-header .desk-leave:focus-visible,
+.desk-header .desk-back:focus-visible {
+    outline: 2px solid #fafafa;
+    outline-offset: 2px;
+}
+
+/* A <button>, so: the page's type, a hand cursor, and `hidden` must still win over the pill's inline-flex. */
+.desk-header .desk-back {
+    font-family: inherit;
+    cursor: pointer;
+    padding: 7px 15px 7px 13px;
+}
+.desk-header .desk-back[hidden] { display: none; }
+
+.desk-leave:hover span { transform: translateX(2px); }
+.desk-back:hover span { transform: translateX(-2px); }
+.desk-leave span,
+.desk-back span { display: inline-block; transition: transform 0.2s ease; }
+
+/* --- Overlay + actions -------------------------------------------------- */
+
+.desk-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    pointer-events: none;
+}
+
+.desk-overlay > * { pointer-events: auto; }
+
+.desk-actions {
+    position: absolute;
+    left: 50%;
+    bottom: 56px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--space-sm);
+    pointer-events: none;
+}
+
+.desk-actions > * { pointer-events: auto; }
+
+.desk-button {
+    appearance: none;
+    border: 1px solid var(--color-hairline);
+    background: rgba(250, 250, 250, 0.92);
+    color: var(--color-ink);
+    font: 500 var(--font-label-sm-size) / 1 var(--font-family);
+    padding: 9px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: background-color 0.2s ease;
+}
+
+.desk-button:hover { background: var(--color-surface); }
+.desk-button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+
+/* Shae's contact links beside "Save receipt" (#printer): links, styled as the
+   quieter, glass pills of the header, so "Save receipt" stays the main action. */
+.desk-button.desk-contact {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: #fafafa;
+    background: rgba(20, 20, 20, 0.42);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+.desk-button.desk-contact:hover { background: rgba(20, 20, 20, 0.6); border-color: rgba(255, 255, 255, 0.26); }
+.desk-button.desk-contact:focus-visible { outline-color: #fafafa; }
+.desk-actions { flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+
+/* --- Hint line ----------------------------------------------------------- */
+
+.desk-hint {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    z-index: 46;
+    margin: 0;
+    transform: translateX(-50%);
+    max-width: min(88vw, 640px);
+    font-size: var(--font-label-sm-size);
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--color-on-primary);
+    text-align: center;
+    /* The tooltip's language (a soft dark pill), fainter: it has to read over
+       whatever is at the bottom of the frame — desk edge, carpet, a print. */
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(20, 20, 20, 0.32);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.desk-hint.is-empty { opacity: 0; }
+
+/* --- Screen-reader only --------------------------------------------------- */
+
+.desk-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- Screenshot mode + reduced motion: every CSS transition lands at once. */
+
+.desk-still *,
+.desk-still *::before,
+.desk-still *::after,
+.desk-reduced *,
+.desk-reduced *::before,
+.desk-reduced *::after {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* The tooltip is pointer-driven; a screenshot never has a pointer. */
+.desk-still .desk-object-label { display: none; }
+
+@media (max-width: 600px) {
+    .desk-hint { bottom: 16px; white-space: normal; }
+    .desk-actions { bottom: 64px; }
+    .desk-header .desk-leave { padding: 6px 11px 6px 13px; }
 }

@@ -1,5 +1,5 @@
-import { FONT_FAMILY } from '../focus/strategies/screenCanvas.js';
-import { stockFor } from '../focus/strategies/pageCanvas.js';
+import { FONT_FAMILY } from './screenCanvas.js';
+import { stockFor } from './pageCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
 
 /**
@@ -18,16 +18,16 @@ import { deviceScaleFor } from './textureBudget.js';
  * THE BODY IS NOT TEXT, AND THAT IS DELIBERATE. It is rules: one per line, with
  * ragged paragraph ends, seeded off the title. At the distance this is ever
  * seen, real type would rasterise to the same grey mush at several times the
- * cost, and the moment anybody gets close enough to read it the focus strategy
- * has already laid real, paginated pages over the top (see
- * focus/strategies/sheetStrategy.js). What has to be honest here is the
- * *shape* of a page, and the title is honest because it comes from the Work.
+ * cost, and on the original site, the moment anybody got close enough to read
+ * it, its sheet strategy had already laid real, paginated pages over the top.
+ * What has to be honest here is the *shape* of a page, and the title is honest
+ * because it comes from the Work.
  *
  * The imports are against the usual direction — palette from the page stock,
  * face from the screen canvas. Both are deliberate and narrow, for the reason
- * scene/idleScreenCanvas.js gives for the same import: this sheet and the
- * pages that later cover it are the same piece of paper, and a private copy of
- * the stock here would let the two drift into different colours.
+ * screenCanvas.js gives at its palette exports: this sheet and the pages that
+ * covered it on the original site were the same piece of paper, and a private
+ * copy of the stock here would have let the two drift into different colours.
  */
 
 // Canvas pixels per world unit. An A5 sheet is 0.474 across and covers roughly

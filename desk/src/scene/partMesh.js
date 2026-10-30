@@ -11,12 +11,14 @@ import { drawSheet, sheetCanvasSize } from './sheetCanvas.js';
  * WHY THIS IS ITS OWN MODULE. It used to live inside DeskScene, which was fine
  * while the only things built from primitives were fixtures of the room — the
  * ledge, the poster wall, the book row. The lanyard broke that: its badges are
- * primitives *and* they are swapped in and out by a focus strategy, so
- * artifactStrategy needs the identical construction. Two copies of this would
- * drift, and the way they would drift is that a part looks subtly different
- * depending on whether it is resting on the desk or has just been stepped to —
- * which is the one difference that must never exist, since those are the same
- * object a third of a second apart.
+ * primitives *and* on the original site they were swapped in and out by a
+ * focus strategy, so its artifactStrategy needed the identical construction.
+ * Two copies of this would drift, and the way they would drift is that a part
+ * looks subtly different depending on whether it is resting on the desk or has
+ * just been stepped to — which is the one difference that must never exist,
+ * since those are the same object a third of a second apart. The site has the
+ * same need: modules/badge/model.js builds the box's badges and the one on the
+ * lamp with buildPartMesh, outside DeskScene.
  */
 
 const GEOMETRY_FACTORIES = {
@@ -88,9 +90,10 @@ const DRAWN_FACES = {
  *
  * @param {object} part
  * @param {number} [anisotropy] the renderer's max, when the caller has a
- *        renderer to ask. Strategies that build parts outside DeskScene don't,
- *        and they draw their parts head-on under a focus camera where glancing
- *        angles — the only thing anisotropy helps — do not arise.
+ *        renderer to ask. The original site's focus strategies built parts
+ *        outside DeskScene without one, and drew them head-on under a focus
+ *        camera where glancing angles — the only thing anisotropy helps — do
+ *        not arise. (modules/badge/model.js passes 4.)
  */
 export function buildPartMaterial(part, anisotropy = 1, bufferHeight = 0) {
     const base = new THREE.MeshStandardMaterial({
@@ -148,10 +151,11 @@ export function buildPartMesh(part, anisotropy, bufferHeight) {
  * The name of the child group holding every part tagged `pose: 'lift'`.
  *
  * WHY A SUBGROUP RATHER THAN A FLAG PER MESH. Posing an object turns some of
- * its parts and not others (see `anchor.present` and focus/pose.js) — and the
- * cheapest honest way to express "some of the parts" in three is a group: one
- * transform to animate, and the parts keep their own positions rather than
- * each carrying a second copy of where it started. The badge tags all of its
+ * its parts and not others (see `anchor.present`, which the original site's
+ * focus/pose.js applied) — and the cheapest honest way to express "some of the
+ * parts" in three is a group: one transform to animate, and the parts keep
+ * their own positions rather than each carrying a second copy of where it
+ * started. The badge tags all of its
  * own parts today, but it did not always, and the paper stack's clip is the
  * live case for a partial pose.
  *

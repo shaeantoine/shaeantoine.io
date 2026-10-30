@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { validateDeskLayout } from './deskSchema.js';
 import { deskObjects } from './deskObjects.js';
-import { works } from './works/index.js';
+import { workExperience } from './works/work.js';
+import { academia } from './works/academia.js';
 import { BOOKS } from './books.js';
 import { CATEGORY_LABELS } from './schema.js';
 import { LANYARD_FOOTPRINT } from './lanyard.js';
 import { paperStackFootprint, paperStackHeight } from './paperStack.js';
-import { TURN_ANGLE, VISIBLE_ARC } from '../focus/strategies/sheetStrategy.js';
-import { PAPER_STOCKS, metricsFor, PAGE_CANVAS_HEIGHT } from '../focus/strategies/pageCanvas.js';
+import { PAPER_STOCKS, metricsFor, PAGE_CANVAS_HEIGHT } from '../scene/pageCanvas.js';
 import { ART_LIGHT_X } from '../scene/lighting.js';
 
 /**
  * A part's corners after the presented pose has been applied to it.
  *
  * The pose is a rotation about a pivot, which three expresses as a group
- * rotation plus a compensating offset (see focus/pose.js's applyPose); the
- * geometry it produces is p -> P + R(p - P), which is what this walks. Euler
+ * rotation plus a compensating offset (as the original site's focus/pose.js
+ * applyPose did); the geometry it produces is p -> P + R(p - P), which is what
+ * this walks. Euler
  * composition is XYZ, so R = Rx·Ry·Rz.
  *
  * AT MODULE SCOPE BECAUSE TWO OBJECTS TIP UP NOW. The lanyard stands its badge
@@ -595,10 +595,6 @@ describe('deskObjects', () => {
         expect(atmosphere.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('satisfies the desk layout schema and every clickable category has a matching Work', () => {
-        expect(() => validateDeskLayout(deskObjects, works)).not.toThrow();
-    });
-
     it('covers every category exactly once among clickable objects', () => {
         const categories = deskObjects.filter((object) => object.clickable).map((object) => object.category);
         expect(new Set(categories).size).toBe(categories.length);
@@ -607,12 +603,10 @@ describe('deskObjects', () => {
     it('leaves no category without a way into it', () => {
         // The other half of the check above, and the assertion that catches the
         // half of a category removal nobody remembers. A category declared in
-        // CATEGORY_LABELS with no object on the desk is content that exists in
-        // the registry, validates cleanly, and is unreachable by any click:
-        // `validateDeskLayout` only walks object -> work (deskSchema.js), never
-        // work -> object, so it passes a label with nothing to click on. This is
-        // the line that fails if a desk object is deleted and its entry in
-        // schema.js CATEGORY_LABELS is left behind.
+        // CATEGORY_LABELS with no object on the desk is a label that exists in
+        // the registry and is unreachable by any click. This is the line that
+        // fails if a desk object is deleted and its entry in schema.js
+        // CATEGORY_LABELS is left behind.
         const reachable = new Set(deskObjects.filter((object) => object.clickable).map((object) => object.category));
         for (const category of Object.keys(CATEGORY_LABELS)) {
             expect(reachable).toContain(category);
@@ -633,10 +627,11 @@ describe('deskObjects', () => {
         // new clickable object landing on a panel-backed visual is a
         // regression worth failing for, not a style preference.
         //
-        // This list mirrors the in-scene half of focus/strategies/index.js. It
-        // lost 'pages' with the two notebooks: nothing lays down a bound
-        // two-page spread any more, and the strategy that did is gone, so a
-        // 'pages' object would not resolve to anything.
+        // This list mirrors the in-scene half of the original site's strategy
+        // table (its focus/strategies/index.js). It lost 'pages' with the two
+        // notebooks: nothing lays down a bound two-page spread any more, and
+        // the strategy that did went with them, so a 'pages' object would not
+        // have resolved to anything.
         const inScene = ['screen', 'sheets', 'artifact'];
         for (const object of deskObjects.filter((entry) => entry.clickable)) {
             expect(inScene).toContain(object.focus.visual);
@@ -914,82 +909,6 @@ describe('the desktop props', () => {
         expect(DESK_HALF_WIDTH - footprints['paper-stack'][1]).toBeGreaterThan(UNIT);
     });
 
-    it('turns the paper stack over desk it can actually reach across', () => {
-        // The sheet pivots on the clipped left edge and sweeps left, so while
-        // focused this object needs desk to its own local left that it does not
-        // occupy at rest.
-        //
-        // THE TILT DOES NOT TOUCH THE X REACH, which is the one thing worth
-        // knowing before reading the rest. The sheaf tips about the object's own
-        // local X and the sheet turns about its local Z, so the turn's x is
-        // decided by the arc alone and the pose leaves it exactly where it was
-        // when the stack lay flat. What the pose does change is z: a sheet that
-        // used to sweep in the plane of the desktop now rises out of it and
-        // swings toward the viewer as it goes, which is why this walks a real
-        // depth range instead of the sheet's own ±depth/2.
-        //
-        // WHAT BINDS HERE HAS CHANGED, and the test is written not to name it.
-        // While the stack stood at x = -1.30 the visible sweep came within
-        // 0.0245 of the soldering station, which is why this assertion exists at
-        // all; from x = 1.862 that margin is 2.96 and the station guards nothing.
-        // The real constraint is now the mouse hand. So the checks below loop
-        // over every other box rather than hard-coding whichever one happens to
-        // be nearest today.
-        const [pageWidth, pageDepth] = stack.focus.anchor.size;
-        const { pivot, rotation } = stack.focus.anchor.present;
-        const tilt = rotation[0];
-        const hinge = stack.focus.anchor.height;
-        const reachAt = (angle) => -pageWidth / 2 + pageWidth * Math.cos(angle);
-
-        // Where a point at local (y, z) on the untipped sheet ends up in z once
-        // the sheaf is standing. The sheet is lowest at the start of the arc and
-        // highest at the quarter turn, and z grows with height, so those two are
-        // the bounds.
-        const tiltedZ = (y, z) => pivot[2] + y * Math.sin(tilt) + (z - pivot[2]) * Math.cos(tilt);
-        const depthAt = (angle) => [
-            tiltedZ(hinge, -pageDepth / 2),
-            tiltedZ(hinge + pageWidth * Math.sin(Math.min(angle, Math.PI / 2)), pageDepth / 2)
-        ];
-
-        const [wholeMinZ, wholeMaxZ] = depthAt(TURN_ANGLE);
-        const whole = footprint(stack.position, stack.rotation[1], [
-            reachAt(TURN_ANGLE), pageWidth / 2, wholeMinZ, wholeMaxZ
-        ]);
-        expect(whole[0]).toBeGreaterThan(-DESK_HALF_WIDTH);
-        expect(whole[1]).toBeLessThan(DESK_HALF_WIDTH);
-        // AND NOT HELD TO THE FRONT EDGE, deliberately. At the top of its arc
-        // the sheet reaches world z 1.52 against a desktop that stops at 1.44,
-        // so it does overhang — by 8 cm, at 0.88 above the desk, which is a
-        // page in the air over the front of the desk and not a page through
-        // anything. The two edges it has to respect are the left and right ones
-        // above, because those are where other props are.
-        expect(whole[3]).toBeGreaterThan(DESK_FRONT_EDGE);
-
-        const [visibleMinZ, visibleMaxZ] = depthAt(TURN_ANGLE * VISIBLE_ARC);
-        const visible = footprint(stack.position, stack.rotation[1], [
-            reachAt(TURN_ANGLE * VISIBLE_ARC), pageWidth / 2, visibleMinZ, visibleMaxZ
-        ]);
-        for (const [id, box] of Object.entries(footprints)) {
-            if (id === 'paper-stack') continue;
-            const [oMinX, oMaxX, oMinZ, oMaxZ] = box;
-            const overlaps = visible[0] < oMaxX && oMinX < visible[1] && visible[2] < oMaxZ && oMinZ < visible[3];
-            expect(`visible sweep vs ${id}: ${overlaps ? 'overlapping' : 'clear'}`)
-                .toBe(`visible sweep vs ${id}: clear`);
-        }
-        // And the three boxes in the middle of the desk that are not props, so
-        // are not in `footprints`. The mousing zone is the one that binds: the
-        // visible sweep stops 0.336 short of its right edge, which is the guard
-        // the station used to provide. That margin was 0.466 while the stack lay
-        // flat — the tilt spends 0.13 of it, because standing the sheaf up swings
-        // the sweep toward the viewer and the mousing zone reaches back that way.
-        for (const [name, box] of [['keyboard', KEYBOARD], ['display', DISPLAY], ['mouse hand', MOUSE_SWEEP]]) {
-            const [oMinX, oMaxX, oMinZ, oMaxZ] = box;
-            const overlaps = visible[0] < oMaxX && oMinX < visible[1] && visible[2] < oMaxZ && oMinZ < visible[3];
-            expect(`visible sweep vs ${name}: ${overlaps ? 'overlapping' : 'clear'}`)
-                .toBe(`visible sweep vs ${name}: clear`);
-        }
-    });
-
     it('floats the focused sheets clear of the stack they lie on', () => {
         // Below the top of the stack, the page is inside it and z-fights with
         // the sheet it exactly overlaps; far above it, the page visibly hovers.
@@ -1003,7 +922,7 @@ describe('the desktop props', () => {
 
 describe('the lanyard', () => {
     const lanyard = deskObjects.find((object) => object.id === 'lanyard');
-    const jobs = works.filter((work) => work.category === 'work');
+    const jobs = workExperience.filter((work) => work.category === 'work');
 
     it('rests as the literal first job\'s artifact rather than a second copy of it', () => {
         // Not deep equality — identity. deskObjects.js hands over the same
@@ -1022,9 +941,10 @@ describe('the lanyard', () => {
     });
 
     it('gives every badge its own holder and clip', () => {
-        // artifactStrategy reparents the resting group into slot 0 on mount, so
-        // hardware shared between cards would leave the desk the first time an
-        // arrow was pressed and never come back. Six identical clips is not
+        // The original site's artifactStrategy reparented the resting group
+        // into slot 0 on mount, so hardware shared between cards would have
+        // left the desk the first time an arrow was pressed and never come
+        // back. Six identical clips is not
         // duplication to be factored out — it is six badges.
         for (const job of jobs) {
             const hardware = job.artifact.parts.filter((part) => !part.badge);
@@ -1160,17 +1080,18 @@ describe('the paper stack', () => {
         // means the sheet on the desk cannot be a lie.
         const printed = stack.parts.filter((part) => part.sheet);
         expect(printed).toHaveLength(1);
-        const papers = works.filter((work) => work.category === 'academia');
+        const papers = academia.filter((work) => work.category === 'academia');
         expect(papers.map((work) => work.title)).toContain(printed[0].sheet.title);
         expect(papers.map((work) => work.editorial.credit)).toContain(printed[0].sheet.credit);
     });
 
     it('prints the paper the focus actually opens on', () => {
-        // FocusController starts at index 0 of worksForCategory, which keeps
-        // registry order. If the printed sheet were some other paper, clicking
-        // the stack would silently replace the title you just read.
+        // The original site's FocusController started at index 0 of
+        // worksForCategory, which kept registry order. If the printed sheet
+        // were some other paper, clicking the stack would have silently
+        // replaced the title you just read.
         const printed = stack.parts.find((part) => part.sheet);
-        const first = works.find((work) => work.category === 'academia');
+        const first = academia.find((work) => work.category === 'academia');
         expect(printed.sheet.title).toBe(first.title);
     });
 
@@ -1257,7 +1178,9 @@ describe('the paper stack', () => {
 });
 
 describe('the focus cameras', () => {
-    // The shot every clickable object is read in. Vertical fov is the camera's
+    // The shot every clickable object was read in on the original site (only
+    // the display's is still used, by the monitor module; see the note on the
+    // `focus` blocks in deskObjects.js). Vertical fov is the camera's
     // own (DeskScene builds it at 45°); the aspect is the one the desk is
     // composed for, plus a narrower one because horizontal framing is the only
     // part of this that a window shape can take away.
@@ -1282,9 +1205,9 @@ describe('the focus cameras', () => {
      *
      * Both printed objects that lie on the desk tip up about
      * `anchor.present.pivot` when focused — the badge onto its clip, the paper
-     * stack onto its front edge — and this is focus/pose.js's
-     * `p -> P + R(p - P)` written out: give the group the rotation and put its
-     * origin at P - R·P.
+     * stack onto its front edge — and this is the original site's
+     * focus/pose.js `p -> P + R(p - P)` written out: give the group the
+     * rotation and put its origin at P - R·P.
      */
     function presentedPose(present) {
         const pose = new THREE.Object3D();
@@ -1302,15 +1225,15 @@ describe('the focus cameras', () => {
      * — the part every one of these shots used to get wrong — which way is up
      * on it.
      *
-     * BUILT THE WAY THE STRATEGY BUILDS IT, not copied from the numbers in the
-     * layout file, because the whole failure this exists to catch was a set of
-     * numbers that each looked right on its own line. The sheet mesh is a plane
-     * laid down by sheetStrategy.placeAsBed's quarter turn about X, so its "up"
-     * is the anchor's local +y carried through that turn, then through the
-     * presented pose, and then through the object's yaw; nothing in
-     * content/deskObjects.js can say so out loud because neither the turn nor
-     * the pose lives there, which is exactly why the paper stack ended up being
-     * read 51° off its own reading axis.
+     * BUILT THE WAY THE ORIGINAL SITE'S STRATEGY BUILT IT, not copied from the
+     * numbers in the layout file, because the whole failure this exists to
+     * catch was a set of numbers that each looked right on its own line. The
+     * sheet mesh is a plane laid down by its sheetStrategy.placeAsBed, a
+     * quarter turn about X, so its "up" is the anchor's local +y carried
+     * through that turn, then through the presented pose, and then through the
+     * object's yaw; nothing in content/deskObjects.js can say so out loud
+     * because neither the turn nor the pose lives there, which is exactly why
+     * the paper stack ended up being read 51° off its own reading axis.
      */
     function readableFace(object) {
         const { visual, anchor } = object.focus;
@@ -1328,11 +1251,11 @@ describe('the focus cameras', () => {
         } else if (visual === 'sheets') {
             group.position.add(new THREE.Vector3(...(anchor.approach ?? [0, 0, 0])));
             face.position.set(0, anchor.height, 0);
-            face.rotation.set(-Math.PI / 2, 0, 0); // sheetStrategy.placeAsBed
+            face.rotation.set(-Math.PI / 2, 0, 0); // the original site's sheetStrategy.placeAsBed
             face.userData.size = anchor.size;
-            // The focused pages hang inside the pose group rather than beside
-            // it (sheetStrategy's `stage`), so the sheaf and the page it is
-            // showing tip up as one thing.
+            // The focused pages hung inside the pose group rather than beside
+            // it (the original site's sheetStrategy `stage`), so the sheaf and
+            // the page it was showing tipped up as one thing.
             const pose = presentedPose(anchor.present);
             pose.add(face);
             group.add(pose);
@@ -1579,9 +1502,9 @@ describe('the focus cameras', () => {
     it('centres what it frames, unless an editorial spread needs the room', () => {
         // The objects that carry their own words — the screen and the sheets —
         // are read in the middle of the frame. The two that are described by the
-        // DOM spread beside them (see .artifact-spread, which ends at 42% of
-        // the viewport) have to leave that column clear, so they sit in the
-        // right half instead.
+        // DOM spread beside them (the original site's .artifact-spread, which
+        // ended at 42% of the viewport) have to leave that column clear, so
+        // they sit in the right half instead.
         //
         // Measured on the OBJECT, not on `lookAtOffset`: the aim point is the
         // middle of the frame by definition, and the composition shift is the

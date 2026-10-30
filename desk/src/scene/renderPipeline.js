@@ -243,8 +243,8 @@ export function createRenderPipeline(renderer, scene, camera, { aoScale = AO_RES
             composer.setSize(width, height);
         },
         /**
-         * The one-line kill switch THE_DESK_DESIGN.md asks for, now reachable
-         * at runtime so scene/perfMonitor.js can take it on a machine that
+         * The one-line kill switch for the AO pass, reachable at runtime so
+         * scene/perfMonitor.js can take it on a machine that
          * cannot afford the pass. Disabling it drops the contact occlusion and
          * keeps tone mapping and MSAA.
          */

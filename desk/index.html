@@ -6,33 +6,46 @@
     <title>Shae McKenna's Desk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- The range syntax (400..700) serves ONE variable woff2 covering every
-         weight. The discrete list this replaces (400;450;500;550;560;600) was
-         six separate static files, and it was also missing 700 — which
-         src/scene/idleScreenCanvas.js and screenCanvas.js both ask for when
-         drawing the monitor, so those titles were being synthesised rather
-         than set. See src/fonts.js for why canvas text makes this load-bearing
-         in a way DOM text is not. -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
+    <!-- Inter is the site's face; Newsreader re-typesets press; Charis SIL
+         (Charter's outlines) sets the monitor's home page and its map. Shae's own
+         handwriting (Shae Hand) is self-hosted and declared in src/style.css.
+         Canvas text waits for these explicitly — see src/core/fonts.js. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap">
+    <!-- Its own link, so a hiccup with this family can never take Inter or Newsreader down with it. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400&display=swap">
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
-    <header id="site-header" class="site-header" hidden>
+    <header id="site-header" class="site-header desk-header" hidden>
         <div class="site-header-inner">
-            <span class="site-header-name">Shae McKenna</span>
-            <nav class="site-header-nav">
-                <a class="nav-link nav-link-active" href="#/">Desk</a>
+            <div class="desk-header-id">
+                <span class="site-header-name">Shae McKenna</span>
+                <!-- Shown whenever a part of the room is open: the same step back as Esc. -->
+                <button id="desk-back" class="desk-back" type="button" hidden><span aria-hidden="true">←</span> back</button>
+            </div>
+            <nav class="site-header-nav" aria-label="Site">
+                <a id="desk-leave" class="nav-link desk-leave" href="#printer">Before you go <span aria-hidden="true">→</span></a>
             </nav>
         </div>
     </header>
 
-    <canvas id="desk-canvas" class="desk-canvas" hidden></canvas>
+    <canvas id="desk-canvas" class="desk-canvas" hidden aria-label="Shae McKenna's desk, in 3D"></canvas>
 
     <div id="desk-object-label" class="desk-object-label" hidden></div>
 
     <div id="webgl-fallback" class="webgl-fallback" hidden>
         <p>This experience needs a browser with WebGL support.</p>
     </div>
+
+    <div id="focus-vignette" class="focus-vignette" hidden></div>
+
+    <!-- Modules' DOM controls live here (pointer events on children only). -->
+    <div id="desk-overlay" class="desk-overlay">
+        <div id="desk-actions" class="desk-actions"></div>
+    </div>
+
+    <p id="desk-hint" class="desk-hint is-empty" aria-hidden="true"></p>
+    <div id="desk-live" class="desk-sr-only" aria-live="polite" aria-atomic="true"></div>
 
     <div id="loading-veil" class="loading-veil">
         <div class="loading-veil-inner">
@@ -42,13 +55,6 @@
             </div>
         </div>
     </div>
-
-    <div id="focus-vignette" class="focus-vignette" hidden></div>
-    <div id="artifact-scrim" class="artifact-scrim" hidden></div>
-    <div id="focus-panel" class="focus-panel" hidden></div>
-    <article id="artifact-spread" class="artifact-spread" aria-live="polite" hidden></article>
-    <button id="screen-arrow-prev" class="screen-arrow" type="button" aria-label="Previous project" hidden>&lsaquo;</button>
-    <button id="screen-arrow-next" class="screen-arrow" type="button" aria-label="Next project" hidden>&rsaquo;</button>
 
     <script type="module" src="./src/main.js"></script>
 </body>

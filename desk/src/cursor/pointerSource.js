@@ -3,14 +3,14 @@
  *
  * WHAT THIS REPLACES. Three modules independently attached `pointermove` to the
  * same canvas — DeskScene for hover raycasting, DeskCursor for the mouse echo,
- * IdleScreen for waking the monitor's caret — and two of them called
- * `getBoundingClientRect()` inside the handler. That is two forced layouts per
- * pointer event, on an element whose box provably cannot have changed between
- * them, plus a raycast, all running at whatever rate the mouse reports rather
- * than at the rate anything is drawn. A 1000 Hz gaming mouse can deliver
- * pointer events far faster than frames, and every one of those was paying the
- * full cost of a frame's worth of pointer work for a frame that would never be
- * rendered.
+ * the original site's IdleScreen for waking the monitor's caret — and two of
+ * them called `getBoundingClientRect()` inside the handler. That is two forced
+ * layouts per pointer event, on an element whose box provably cannot have
+ * changed between them, plus a raycast, all running at whatever rate the
+ * mouse reports rather than at the rate anything is drawn. A 1000 Hz gaming
+ * mouse can deliver pointer events far faster than frames, and every one of
+ * those was paying the full cost of a frame's worth of pointer work for a frame
+ * that would never be rendered.
  *
  * TWO FIXES, AND THE SECOND IS THE ONE THAT MATTERS. Coalescing to one
  * animation frame means the work happens once per frame the browser will
@@ -25,8 +25,8 @@
  * the canvas's box changes without the window doing so.
  *
  * NOTHING HERE DECIDES WHAT A POINTER MEANS. It converts events to normalised
- * device coordinates and hands them out; hover, echo and wake are still each
- * subscriber's business.
+ * device coordinates and hands them out; hover, echo and whatever a module
+ * does with ctx.pointer are still each subscriber's business.
  */
 
 /**

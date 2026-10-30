@@ -70,9 +70,10 @@ describe('buildLanyard', () => {
     });
 
     it('is deterministic, so the resting prop and the artifact can be compared', () => {
-        // validateDeskLayout deep-compares the desk object's parts against the
-        // first job's artifact parts. Any randomness here would make that
-        // comparison fail intermittently and for no visible reason.
+        // The original site's layout validator deep-compared the desk object's
+        // parts against the first job's artifact parts. Any randomness here
+        // would have made that comparison fail intermittently and for no
+        // visible reason.
         expect(JSON.stringify(buildLanyard(APPLE))).toBe(JSON.stringify(buildLanyard(APPLE)));
     });
 
@@ -173,20 +174,21 @@ describe('buildLanyard', () => {
     });
 
     it('agrees with BADGE_FRONT about where the object ends', () => {
-        // Two other files place things against this number — the focus pivot
-        // and the desk's spacing chain — so it going stale is not a cosmetic
-        // problem. It is exported rather than measured precisely so that both
-        // of them move when the clip does, and this is what keeps the export
-        // honest about the geometry it claims to describe.
+        // Other files place things against this number — the focus pivot, the
+        // desk's spacing chain and modules/badge's upright badge — so it going
+        // stale is not a cosmetic problem. It is exported rather than measured
+        // precisely so that all of them move when the clip does, and this is
+        // what keeps the export honest about the geometry it claims to describe.
         const front = Math.max(...buildLanyard(APPLE).parts.map((part) => boundsOf(part).maxZ));
         expect(front).toBeCloseTo(BADGE_FRONT, 9);
     });
 
     it('stands the whole badge up, clip included', () => {
-        // scene/partMesh.js collects the tagged parts into the group
-        // artifactStrategy rotates. With the strap gone there is nothing left
-        // that should stay on the desk — the clip is what the card is propped
-        // ON, so leaving it behind would stand the card on nothing.
+        // scene/partMesh.js collects the tagged parts into the group the
+        // original site's artifactStrategy rotated. With the strap gone there
+        // is nothing left that should stay on the desk — the clip is what the
+        // card is propped ON, so leaving it behind would stand the card on
+        // nothing.
         for (const part of buildLanyard(APPLE).parts) {
             expect(part.pose).toBe(POSE_GROUP_NAME);
         }

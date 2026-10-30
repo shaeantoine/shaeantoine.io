@@ -2,22 +2,26 @@
  * One badge: an ID card in a holder with a bulldog clip on its near edge,
  * lying face-up on the desk.
  *
- * WHY THIS IS A FUNCTION AND NOT A PILE OF LITERALS. Two callers need
- * byte-identical output. The desk object (content/deskObjects.js) rests as the
- * first job's badge, and that same job's `artifact` is what artifactStrategy
- * shows when you focus it — validateDeskLayout enforces that they match,
- * because if they ever diverge the object would visibly change the instant you
- * clicked it while appearing to do nothing. Generating both from one call makes
- * that impossible to get wrong rather than merely tested for.
+ * WHY THIS IS A FUNCTION AND NOT A PILE OF LITERALS. Two callers needed
+ * byte-identical output on the original site. The desk object
+ * (content/deskObjects.js) rested as the first job's badge, and that same job's
+ * `artifact` was what its artifactStrategy showed when you focused it — its
+ * layout validator enforced that they matched, because if they ever diverged
+ * the object would visibly change the instant you clicked it while appearing to
+ * do nothing. Generating both from one call made that impossible to get wrong
+ * rather than merely tested for. The site's badges still come from this one
+ * call: modules/badge/model.js builds the box's past badges and the current one
+ * on the lamp by making it again with the arguments each work.js `artifact`
+ * was made with (modules/badge/dims.js, lanyardArgs).
  *
- * WHY EVERY BADGE CARRIES ITS OWN HARDWARE. artifactStrategy reparents the
- * whole resting group into the first project's slot on mount, so anything
- * shared — one clip the cards swap underneath — would walk off the desk the
- * first time an arrow was pressed.
+ * WHY EVERY BADGE CARRIES ITS OWN HARDWARE. The original site's
+ * artifactStrategy reparented the whole resting group into the first project's
+ * slot on mount, so anything shared — one clip the cards swapped underneath —
+ * would have walked off the desk the first time an arrow was pressed.
  *
  * IT USED TO HAVE A LANYARD STRAP, and losing it was a composition decision
  * rather than a modelling one. The tape sprawled to the viewer's left, and once
- * the editorial column moved to that side of the frame (see style.css
+ * the editorial column moved to that side of the frame (the original site's
  * .artifact-spread) the strap ran the full width of the shot underneath the
  * prose: measured, the object spanned from 8.5% of the viewport at 16:9 and
  * 0.8% at 3:2, against a card that only ever occupied 66–75%. A clip badge is
@@ -34,12 +38,14 @@
  *   is what makes it a bulldog clip rather than a metal tab: it is the part
  *   you press, so it is the part that says the thing opens.
  *
- * THE CLIP IS AT THE NEAR EDGE, WHICH IS A FOCUS DECISION. Focusing the object
- * tips the card up on its near edge so its face meets the camera (see
- * `anchor.present` in content/deskObjects.js). Whatever the card pivots on has
- * to be the thing holding it, so the slot, the swivel and the clip all sit on
- * that edge — and the card ends up propped on its own clip, which is both
- * correct and a better image than a card standing on nothing.
+ * THE CLIP IS AT THE NEAR EDGE, WHICH WAS A FOCUS DECISION. Focusing the object
+ * on the original site tipped the card up on its near edge so its face met the
+ * camera (see `anchor.present` in content/deskObjects.js). Whatever the card
+ * pivots on has to be the thing holding it, so the slot, the swivel and the
+ * clip all sit on that edge — and the card ended up propped on its own clip,
+ * which is both correct and a better image than a card standing on nothing.
+ * It is also the edge a badge hangs from: modules/badge stands it upright with
+ * the clip at the top.
  *
  * DIMENSIONS ARE REAL. A CR80 badge is 54 x 86 mm and surfaces.js puts the
  * scene at 3.2 units per metre, so the card is 0.173 x 0.275 before its
@@ -105,13 +111,14 @@ const LOWER_JAW_Z = HINGE_Z + LOWER_JAW_DEPTH / 2;
 const LIP_Z = UPPER_JAW_Z + UPPER_JAW_DEPTH / 2 + LIP_DEPTH / 2;
 
 /**
- * The front of the whole assembly, which two other files need by name.
+ * The front of the whole assembly, which other files need by name.
  *
- * It is the point the badge is propped on when it stands up — content's
- * `anchor.present.pivot` is this, because a pivot anywhere behind it swings
- * whatever is in front of it down through the desktop — and it is the front of
- * LANYARD_FOOTPRINT, which is what the desk's spacing chain is measured
- * against.
+ * It is the point the badge was propped on when the original site stood it up
+ * — content's `anchor.present.pivot` is this, because a pivot anywhere behind
+ * it swings whatever is in front of it down through the desktop — and it is the
+ * front of LANYARD_FOOTPRINT, which is what the desk's spacing chain is
+ * measured against. modules/badge (model.js, dims.js) puts the origin of its
+ * upright badge here, at the tip of the clip, and measures the card from it.
  */
 export const BADGE_FRONT = LIP_Z + LIP_DEPTH / 2;
 
@@ -141,10 +148,11 @@ export const LANYARD_FOOTPRINT = {
 };
 
 /**
- * Which parts stand up when the object is focused.
+ * Which parts stood up when the original site focused the object.
  *
  * scene/partMesh.js collects every part tagged this way into one child group,
- * and artifactStrategy rotates that group about `anchor.present.pivot`. The
+ * and the original site's artifactStrategy rotated that group about
+ * `anchor.present.pivot`. The
  * card, its holder and the hardware holding it are the badge; the strap is
  * not, and tagging it too would tip the whole lanyard up like a cardboard
  * cutout instead of standing a card on the end of a strap that stays put.

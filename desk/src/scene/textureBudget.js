@@ -6,7 +6,7 @@
  * `RESOLUTION_SCALE = 3`. That reads as a small number and is not one. The
  * display's canvas is 1787 x 1000 logical, so 3x is 5361 x 3000: sixteen
  * megapixels, 64 MB of RGBA on the CPU and another 64 MB (85 with mips) once
- * it's uploaded. The book allocates three of those at 3024 x 4200 apiece. A
+ * it's uploaded. The original site's book allocated three of those at 3024 x 4200 apiece. A
  * desk with the monitor resting and a book open was asking for something like
  * 300 MB of texture memory to show two pages of prose.
  *
@@ -35,8 +35,7 @@
  * never on the window's width; a width fraction therefore holds at one window
  * shape and drifts at every other, and drifts OPEN in a tall one, handing back
  * fewer texels than the surface covers. `anchor.framing` replaces it with both
- * extents measured off the real focus camera, in units of buffer height, by
- * `node scripts/analyze-focus-cameras.mjs`.
+ * extents measured off the real focus camera, in units of buffer height.
  *
  * Surfaces that no focus camera frames — the badge, the book spines, the
  * resting top sheet — keep their own pixels-per-world-unit constants and take
@@ -124,8 +123,7 @@ function fallbackBufferHeight() {
  * surface covered, which is outright bilinear magnification.
  *
  * `framing` is that angular size, measured rather than guessed: both extents in
- * units of the buffer's height, printed by
- * `node scripts/analyze-focus-cameras.mjs`. It is a property of the shot, so it
+ * units of the buffer's height. It is a property of the shot, so it
  * goes stale if a focus camera is retuned and nothing at runtime can tell.
  *
  * THE LARGER AXIS WINS. A page seen at 30° off-normal is foreshortened

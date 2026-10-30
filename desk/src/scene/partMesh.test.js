@@ -40,8 +40,8 @@ describe('buildPartsGroup', () => {
 
     it('collects the posed parts into one child group, in order', () => {
         // Some of an object's parts turn while the rest stay put. One subgroup
-        // is how "some of the parts" is expressed as a single transform for a
-        // focus strategy to animate.
+        // is how "some of the parts" is expressed as a single transform to
+        // animate (the original site's focus strategies did the animating).
         const group = buildPartsGroup([
             box({ color: '#strap1' }),
             box({ color: '#card', pose: POSE_GROUP_NAME }),
@@ -58,10 +58,10 @@ describe('buildPartsGroup', () => {
     });
 
     it('leaves posed parts at the positions they were authored at', () => {
-        // The pose group sits at the origin and artifactStrategy does the
-        // pivoting arithmetic; rebasing positions here as well would apply the
-        // offset twice, and the symptom is an object that jumps the first time
-        // it is focused.
+        // The pose group sits at the origin and whoever poses it does the
+        // pivoting arithmetic (the original site's artifactStrategy did);
+        // rebasing positions here as well would apply the offset twice, and the
+        // symptom is an object that jumps the first time it is focused.
         const group = buildPartsGroup([box({ position: [0, 0.008, -0.05], pose: POSE_GROUP_NAME })]);
         const pose = group.getObjectByName(POSE_GROUP_NAME);
         expect([pose.position.x, pose.position.y, pose.position.z]).toEqual([0, 0, 0]);

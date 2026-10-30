@@ -73,8 +73,8 @@ const MAX_DRAWING_BUFFER_PIXELS = 8.3e6;
 //   monitor ink              20        4         20      20
 //
 // Those two rows were read off a real frame, not computed. Printed paper goes
-// the same way: the one printed surface left on the desk is the paper stack's
-// `manuscript` stock — #fbfaf7 sheet, #1d2024 ink (see pageCanvas.js
+// the same way: the one printed surface the original site left on the desk is
+// the paper stack's `manuscript` stock — #fbfaf7 sheet, #1d2024 ink (see pageCanvas.js
 // PAPER_STOCKS) — and ACES treats it as it treats the monitor, pulling the
 // sheet off white and crushing the near-black ink below what was authored. The
 // table used to carry a measured pair for the retired notebook stock; no
@@ -263,8 +263,9 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
 
     // Defends against a second live renderer ever being bound to the same
     // canvas — e.g. if a dev-server HMR replay re-runs this module without a
-    // full page reload. main.js's own `deskScene` guard can't catch that,
-    // since a re-run starts with a fresh `null`. Stashing the active
+    // full page reload. A `deskScene` guard in the caller (the original
+    // site's main.js kept one) can't catch that, since a re-run starts with a
+    // fresh `null`. Stashing the active
     // instance on the DOM node itself survives across module re-executions.
     canvasEl.__deskScene?.dispose();
 
@@ -383,7 +384,8 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
                     // that attaches decoration to a loaded object — the resting
                     // screen on the display — would otherwise be measured into
                     // the object's own rest bounds, widening the box that the
-                    // hover tooltip and the focus arrows are pinned to.
+                    // hover tooltip (and the original site's focus arrows)
+                    // are pinned to.
                     onObjectLoaded?.(object.id);
                 }));
         }
@@ -399,8 +401,9 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    // The canvas's single pointer listener, shared with DeskCursor and
-    // IdleScreen through `instance.pointer`. @see cursor/pointerSource.js
+    // The canvas's single pointer listener, shared with DeskCursor, the
+    // router (src/main.js) and the modules (ctx.pointer) through
+    // `instance.pointer`. @see cursor/pointerSource.js
     const pointerSource = createPointerSource(canvasEl);
     const liftOffset = new THREE.Vector3();
     let hovered = null;
@@ -772,17 +775,18 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     }
 
     /**
-     * The object's rest bounds, for anchoring screen-space chrome (arrows,
-     * tooltip, text panel) to it.
+     * The object's rest bounds, for anchoring screen-space chrome to it: the
+     * hover tooltip (src/main.js), and on the original site its focus arrows
+     * and text panel too.
      *
      * Frozen at load rather than measured live, for the same reason the
      * hit-test proxies are. Box3.setFromObject walks every descendant
-     * regardless of visibility, so a focus strategy that animates the group's
-     * contents — the hardware object sliding one project out and the next in
-     * — would widen and narrow this box on every frame of the swap, and any
-     * chrome positioned from it would drift along with the objects. Arrows
-     * that move because the thing they control is moving are exactly what
-     * they shouldn't do.
+     * regardless of visibility, so anything that animates the group's
+     * contents — the original site's hardware object sliding one project out
+     * and the next in — would widen and narrow this box on every frame of the
+     * swap, and any chrome positioned from it would drift along with the
+     * objects. Arrows that move because the thing they control is moving are
+     * exactly what they shouldn't do.
      *
      * The raise is the one group-level offset worth folding back in: it's a
      * step change that holds for a whole focus session rather than an
@@ -790,16 +794,17 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
      * out, the arrows would sit a visible fraction of the object's height
      * below its centre for as long as it was raised.
      *
-     * `userData.chromeMaxY` is the same argument for the same reason. A focus
-     * strategy that stands its object up — the badge (see `anchor.present` and
-     * focus/pose.js) — changes the object's height for the whole session, so
-     * it publishes the top it reaches and this box grows to include it. Without
-     * that, the arrows flank a card by sitting at its feet. It is set on entry
-     * and deleted on exit, so at rest this reads exactly as it did before.
+     * `userData.chromeMaxY` is the same argument for the same reason, kept from
+     * the original site; nothing on this site sets it. A focus strategy there
+     * that stood its object up — the badge (see `anchor.present`) — changed the
+     * object's height for the whole session, so it published the top it
+     * reached and this box grew to include it. Without that, the arrows flanked
+     * a card by sitting at its feet. It was set on entry and deleted on exit,
+     * so at rest this reads exactly as it did before.
      *
-     * Only the arrow-stepped visuals set it. The paper stack tips up through
-     * the same field and floats no chrome to be flanked by — it is stepped by
-     * clicking the page itself — so it never publishes one.
+     * Only the arrow-stepped visuals set it. The paper stack tipped up through
+     * the same field and floated no chrome to be flanked by — it was stepped by
+     * clicking the page itself — so it never published one.
      */
     function getObjectScreenBox(id) {
         const group = objectsById.get(id);
@@ -832,12 +837,13 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         renderer,
         scene,
         camera,
-        /** The canvas's one pointer listener, for DeskCursor and IdleScreen to
-         *  subscribe to rather than adding their own. @see cursor/pointerSource.js */
+        /** The canvas's one pointer listener, for DeskCursor, the router and the
+         *  modules (ctx.pointer) to share rather than adding their own.
+         *  @see cursor/pointerSource.js */
         pointer: pointerSource,
-        /** The GPU's real maximum, read once. Threaded into focus strategies so
-         *  a page or a card built outside this module filters as well as the
-         *  room's own surfaces do. */
+        /** The GPU's real maximum, read once. Threaded into the modules
+         *  (core/context.js) so a page or a card built outside this module
+         *  filters as well as the room's own surfaces do. */
         maxAnisotropy: anisotropy,
         /** @see scene/textureBudget.js — the budgeted buffer height, device px. */
         getDrawingBufferHeight: () => drawingBufferHeight,

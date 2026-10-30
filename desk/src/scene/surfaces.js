@@ -21,8 +21,8 @@ export const UNITS_PER_METER = 3.2;
 
 /**
  * Set a directory path here to load a real photo-sourced PBR set instead of
- * the procedural maps below — see scripts/fetch-textures.sh, which downloads
- * CC0 sets from ambientCG into exactly these paths.
+ * the procedural maps below — CC0 sets from ambientCG (ambientcg.com),
+ * unzipped into exactly these paths.
  *
  * Each directory holds the four maps ambientCG ships in its 2K-JPG zips, under
  * their original names but recompressed to WebP by scripts/optimize-images.sh:

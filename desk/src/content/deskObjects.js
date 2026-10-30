@@ -25,7 +25,8 @@ const SHEET_COUNT = 9;
  * a run of loose A5 held by one edge clip is not, past a reading slope. At 40°
  * the sheaf still reads as resting on the desk, and it is enough to bring the
  * camera down from 62° above the desktop to 38° — which is the whole point of
- * doing it. @see the `camera` block below, and focus/pose.js.
+ * doing it. @see the `camera` block below, and the original site's
+ * focus/pose.js, which applied it.
  *
  * THE PIVOT IS THE FOOTPRINT'S FRONT EDGE, NOT THE SHEET'S. A rigid rotation
  * sends everything in front of the hinge downward, so the hinge has to be at
@@ -73,6 +74,14 @@ const STACK_PIVOT_Z = paperStackFootprint({
  *       envMapIntensity: 1.2   // how much of the window the surface picks up;
  *                              // the strongest "sits in the room" knob
  *   }
+ *
+ * THE `focus` BLOCKS ARE THE ORIGINAL SITE'S, written for the focus strategies
+ * it opened objects with, and the notes inside them describe that site's
+ * shots, panels and arrows. Of the four, only the display's is still read by
+ * the site: the monitor module takes its camera and anchor from here
+ * (modules/monitor/index.js). The breadboard and the lanyard are left out of
+ * the room (core/layout.js) and the paper module replaces the stack, so the
+ * other three are read by deskObjects.test.js alone.
  */
 export const deskObjects = [
     {
@@ -128,7 +137,7 @@ export const deskObjects = [
                 // object in the file that carries one and the other one points
                 // at this line. It is the focused subject's own footprint at
                 // the shot above, in units of the drawing buffer's HEIGHT,
-                // printed by `node scripts/analyze-focus-cameras.mjs`.
+                // measured off the focus camera (by an analysis script, since removed).
                 // scene/textureBudget.js sizes the canvases from it, so too
                 // small costs resolution and too large costs memory. Retune the
                 // camera and this goes stale SILENTLY — nothing throws, and the
@@ -136,11 +145,14 @@ export const deskObjects = [
                 //
                 // The RESTING screen is the same canvas at a completely
                 // different size — 0.44 x 0.24 at the establishing shot — and
-                // is allocated from THIS number anyway, so the resting and
-                // focused panels are the same resolution at the instant focus
-                // swaps one for the other. Sizing it to its own footprint is
-                // the obvious saving and is deliberately not taken; see
-                // scene/IdleScreen.js and the note on createScreenCanvas.
+                // is allocated from THIS number anyway: the monitor module
+                // sizes its one screen canvas from it whether the camera is
+                // close or across the room, as the original site sized its
+                // resting and focused screens alike so they were the same
+                // resolution at the instant focus swapped one for the other.
+                // Sizing it to its own footprint is the obvious saving and is
+                // deliberately not taken; see the note on createScreenCanvas
+                // in scene/screenCanvas.js.
                 framing: [1.165, 0.652]
             }
         }
@@ -237,8 +249,8 @@ export const deskObjects = [
             // THE AIM IS DELIBERATELY NOT THE OBJECT. It sits 0.75 to the
             // object's screen-LEFT, which swings the station into the right
             // half of the frame and leaves the left clear for the editorial
-            // spread (see style.css .artifact-spread, which ends at 42% of
-            // the viewport). Derived rather than guessed: screen-right in world
+            // spread (the original site's .artifact-spread, which ended at 42%
+            // of the viewport). Derived rather than guessed: screen-right in world
             // terms is normalize(cross(-view, up)) ≈ (0.976, 0, -0.216) for
             // this view vector, and the pair below puts the object's bounding
             // box inside x ∈ [0.04, 0.78] of the frame at 16:9 and
@@ -296,9 +308,10 @@ export const deskObjects = [
     // six prestigious names in a row.
     //
     // THE RESTING PARTS ARE THE FIRST JOB'S ARTIFACT, generated from the same
-    // call. validateDeskLayout compares them and throws if they drift, because
-    // a mismatch would make the object visibly change the instant it was
-    // clicked while appearing to do nothing at all. See content/lanyard.js.
+    // call. The original site's validateDeskLayout compared them and threw if
+    // they drifted, because a mismatch would make the object visibly change the
+    // instant it was clicked while appearing to do nothing at all. See
+    // content/lanyard.js.
     //
     // BOTH COORDINATES ARE SOLVED FROM LANYARD_FOOTPRINT, which is why they
     // moved when the object lost its lanyard strap. The badge used to sprawl
@@ -405,10 +418,11 @@ export const deskObjects = [
             // `lookAtOffset` is that centre plus a shift along screen-LEFT —
             // -normalize(cross(-normal, up)) ≈ (-0.913, 0, 0.408) — which swings
             // the card into the right third and leaves the left clear for the
-            // editorial spread (see style.css .artifact-spread). Screen-right is
-            // taken from the UNSHIFTED shot, i.e. from the normal the camera
-            // stands on rather than from the aimed view vector, which is a
-            // different axis once the shift has been applied. Both offsets are
+            // editorial spread (the original site's .artifact-spread).
+            // Screen-right is taken from the UNSHIFTED shot, i.e. from the
+            // normal the camera stands on rather than from the aimed view
+            // vector, which is a different axis once the shift has been
+            // applied. Both offsets are
             // WORLD-space; see CameraRig.focusOn.
             //
             // THE SHIFT USED TO GO THE OTHER WAY. The column moved to the left
@@ -474,12 +488,13 @@ export const deskObjects = [
         label: CATEGORY_LABELS.academia,
         clickable: true,
         // CROSSED THE DESK, from [-1.30, 0, 0.88] to the right flank, and the
-        // page turn is the reason. The clip is on the stack's left edge and
-        // sheetStrategy sweeps the sheet leftward, which is a right-handed turn:
-        // grab the free right edge, swing it over the clip. This file already
-        // establishes a right-handed user by putting the mouse at x = +0.8, so
-        // the printouts belong past the mouse and the mains-powered bench
-        // belongs on the other side, out of the sweep of the mouse hand.
+        // page turn is the reason. The clip is on the stack's left edge and the
+        // original site's sheetStrategy swept the sheet leftward, which is a
+        // right-handed turn: grab the free right edge, swing it over the clip.
+        // This file already establishes a right-handed user by putting the
+        // mouse at x = +0.8, so the printouts belong past the mouse and the
+        // mains-powered bench belongs on the other side, out of the sweep of
+        // the mouse hand.
         //
         // x = 1.862 IS THE SPACING UNIT MEASURED OFF THE MOUSE HAND. The mouse's
         // own model bounds are useless for this — computer_mouse.glb places at
@@ -529,9 +544,10 @@ export const deskObjects = [
         hover: { lift: 0.022 },
         // The print is the first academic work's own title and credit, by
         // reference rather than by copy — the sheet on the desk cannot show
-        // something that isn't in the registry, and cannot go stale when the
-        // registry is reordered. It is also the page the focus opens on, since
-        // worksForCategory keeps registry order.
+        // something that isn't in content/works/academia.js, and cannot go
+        // stale when that list is reordered. It was also the page the original
+        // site's focus opened on, since its worksForCategory kept registry
+        // order.
         parts: buildPaperStack({
             sheets: SHEET_COUNT,
             width: SHEET_SIZE[0],
@@ -545,16 +561,17 @@ export const deskObjects = [
             // making a run of stapled paper behave like a bound book would be
             // wrong on the one object that exists precisely because it is not
             // one. The sheet hinges on the clipped left edge and sweeps left,
-            // which is a right-handed turn. See
-            // focus/strategies/sheetStrategy.js.
+            // which is a right-handed turn — the original site's
+            // sheetStrategy.
             visual: 'sheets',
             // THE CAMERA'S BEARING IS NOT A FREE CHOICE FOR ANYTHING PRINTED,
             // and this is the only object left on the desk that it governs — so
             // the rule is written out here in full rather than pointed at.
             //
             // The page mesh is built in the anchor's frame and laid flat by
-            // sheetStrategy.placeAsBed's quarter turn about X (there is no
-            // `anchor.rotation` on this object; the strategy owns that turn),
+            // the original site's sheetStrategy.placeAsBed, a quarter turn
+            // about X (there is no `anchor.rotation` on this object; the
+            // strategy owned that turn),
             // which sends the top of the type to the object's own local -z.
             // Stand anywhere other than along that axis and the type arrives on
             // screen rotated by exactly how far off it you are. This shot used
@@ -633,14 +650,14 @@ export const deskObjects = [
             // standoff is what keeps a 45° lens from keystoning the page and
             // leaves some desk in shot around it.
             //
-            // IT STOPS SHORT OF DOM PARITY ON PURPOSE. The 17 px the DOM spreads
-            // elsewhere on this site are set in is not reachable from here by
-            // enlarging the face: the two columns are the tell that says
-            // "printout" rather than "book", and a column this narrow is already
-            // at 30-35 characters a line, so a larger face would take it down to
-            // a list of fragments. Distance alone closes most of the gap and then
-            // stops, which is the right way round for the densest page here.
-            // `node scripts/analyze-focus-cameras.mjs --sweep` prints the range.
+            // IT STOPS SHORT OF DOM PARITY ON PURPOSE. The 17 px the DOM
+            // spreads elsewhere on the original site were set in is not
+            // reachable from here by enlarging the face: the two columns are
+            // the tell that says "printout" rather than "book", and a column
+            // this narrow is already at 30-35 characters a line, so a larger
+            // face would take it down to a list of fragments. Distance alone
+            // closes most of the gap and then stops, which is the right way
+            // round for the densest page here.
             //
             // It is a portrait page in a landscape frame, so height is the
             // binding dimension rather than width: 66% of frame height against
@@ -660,11 +677,12 @@ export const deskObjects = [
                 size: SHEET_SIZE,
                 framing: [0.506, 0.663], // @see the studio display's `framing`
                 // THE SHEAF TIPS UP TO MEET THE CAMERA. @see STACK_TILT at the
-                // top of this file for the two numbers, and focus/pose.js for
-                // the mechanism it shares with the badge. Everything in this
-                // object carries the tag — sheets, clip, and the focused pages
-                // hanging inside the same group — so what tips is the whole
-                // clipped run rather than a page peeled off the top of it.
+                // top of this file for the two numbers; the mechanism it shared
+                // with the badge was the original site's focus/pose.js.
+                // Everything in this object carries the tag — sheets, clip, and
+                // the focused pages hanging inside the same group — so what
+                // tips is the whole clipped run rather than a page peeled off
+                // the top of it.
                 present: { pivot: [0, 0, STACK_PIVOT_Z], rotation: [STACK_TILT, 0, 0] },
                 // Just clear of the stack, and of the clip standing on it. The
                 // barrel reaches paperStackHeight + 0.0072 (content/paperStack.js

@@ -62,7 +62,8 @@ export function loadTexture(url) {
  *
  * Already decoded when the URL was preloaded, which is the case that matters:
  * the mesh built around it draws correctly on its very first frame. When it
- * was not — a badge or a card built by a focus strategy long after load — the
+ * was not — a part built long after load from a file the layout never named,
+ * the way the original site's focus strategies built badges and cards — the
  * texture fills itself in later, and `onLoad` is where the caller asks for the
  * frame that will show it.
  *

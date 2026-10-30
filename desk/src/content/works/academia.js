@@ -2,9 +2,7 @@ export const triangulations = {
     id: 'academia-triangulations',
     title: 'Experimentally Bounding the Space of Triangulations',
     date: '2024-06-01',
-    previewImage: '/previews/academia-triangulations.png',
     blurb: 'Monte Carlo as a way of doing mathematics, supervised by Prof. Jonathan Spreer.',
-    previewAspect: 'square',
     category: 'academia',
     connections: [
         {
@@ -27,9 +25,7 @@ export const pVsNp = {
     id: 'academia-p-vs-np',
     title: 'The State of P vs NP',
     date: '2024-03-01',
-    previewImage: '/previews/academia-p-vs-np.png',
     blurb: 'A literature review with a team of five, supervised by Prof. Alexander Fish.',
-    previewAspect: 'tall',
     category: 'academia',
     connections: [
         {
@@ -52,9 +48,7 @@ export const medicalEducation = {
     id: 'academia-medical-education',
     title: 'Large Language Models in Medical Education',
     date: '2024-09-01',
-    previewImage: '/previews/academia-medical-education.png',
     blurb: 'The highest-stakes place to put a model that is confidently wrong.',
-    previewAspect: 'wide',
     category: 'academia',
     connections: [
         {

@@ -44,7 +44,7 @@ export function preloadGLTF(url) {
 /**
  * Cached GLTFLoader wrapper — returns a cloned scene graph per call so
  * callers can freely mutate/dispose their own instance without corrupting
- * the cached source. Mirrors universe/src/loaders/gltf.js.
+ * the cached source.
  */
 export function loadGLTF(url) {
     return fetchGLTF(url).then((gltf) => gltf.scene.clone(true));

@@ -1,4 +1,4 @@
-import { FONT_FAMILY } from '../focus/strategies/screenCanvas.js';
+import { FONT_FAMILY } from './screenCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
 
 /**

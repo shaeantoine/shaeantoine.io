@@ -5,9 +5,10 @@ import { applyTextTexturePolicy } from './textTexture.js';
 /**
  * These run in node with no DOM, so they exercise the policy against a plain
  * THREE.Texture rather than a real CanvasTexture. That is the whole reason the
- * policy is a function in its own module: as a private helper copied into two
- * strategies it could only be reached through `mount`, which needs a canvas,
- * which is why nothing ever guarded it and why the two copies drifted.
+ * policy is a function in its own module: as a private helper copied into the
+ * original site's two paper strategies it could only be reached through
+ * `mount`, which needs a canvas, which is why nothing ever guarded it and why
+ * the two copies drifted.
  */
 describe('applyTextTexturePolicy', () => {
     it('tags the texture sRGB', () => {

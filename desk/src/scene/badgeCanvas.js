@@ -1,4 +1,4 @@
-import { FONT_FAMILY } from '../focus/strategies/screenCanvas.js';
+import { FONT_FAMILY } from './screenCanvas.js';
 import { luminanceOf } from './bookSpineCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
 
@@ -18,7 +18,7 @@ import { deviceScaleFor } from './textureBudget.js';
  * pale portrait block, two lines of text, a filled access chip and a dark strip
  * at the foot. Five blocks in that arrangement reads as "ID card" long before
  * any of the lettering resolves, which is the same bet the three window dots
- * make on the monitor (scene/idleScreenCanvas.js).
+ * made on the original site's resting monitor.
  *
  * There is deliberately no photograph. A portrait would have to be a real image
  * asset per badge, and a generic silhouette on six cards would read as stock
