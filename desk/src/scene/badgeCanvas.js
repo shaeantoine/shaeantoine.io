@@ -1,6 +1,7 @@
 import { FONT_FAMILY } from './screenCanvas.js';
 import { luminanceOf } from './bookSpineCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
+import { context2d } from '../core/draw.js';
 
 /**
  * The face of an employee ID badge, drawn to a canvas used as the front face
@@ -112,7 +113,10 @@ export function monogramFor(org) {
  * @param {{ org: string, role: string, color: string, accent?: string, access?: string, year?: string }} badge
  */
 export function drawBadge(canvas, { org, role, color, accent, access, year }) {
-    const ctx = canvas.getContext('2d');
+    // Sizes are read after the context: if the canvas cap refused this one,
+    // context2d (core/draw.js) shrank it, and every number below is a fraction
+    // of what is left.
+    const ctx = context2d(canvas, { label: `badge: ${org}` });
     const width = canvas.width;
     const height = canvas.height;
     const ink = inkFor(color);

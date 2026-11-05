@@ -1,6 +1,7 @@
 import { CATEGORY_LABELS } from '../content/schema.js';
 import { createFootprintCanvas } from './textureBudget.js';
 import { wrapLines } from './pagination.js';
+import { context2d } from '../core/draw.js';
 
 /**
  * Canvas rendering for the monitor's screen: draws a work as a light,
@@ -78,7 +79,10 @@ export function createScreenCanvas(aspect, budget) {
 
 /** Real canvas-backed text measurer for production use (tests would inject their own). */
 export function createMeasurer() {
-    const ctx = document.createElement('canvas').getContext('2d');
+    // Measuring only, so a refused one costs nothing visible: text measures the
+    // same on context2d's 1 × 1 (and its inert stand-in, if it comes to that,
+    // estimates).
+    const ctx = context2d(document.createElement('canvas'), { label: 'screen text measurer' });
     return function measureWidth(text, fontSize, weight = '') {
         ctx.font = `${weight} ${fontSize}px ${FONT_FAMILY}`.trim();
         return ctx.measureText(text).width;
@@ -86,7 +90,7 @@ export function createMeasurer() {
 }
 
 export function drawScreen(canvas, work, measureWidth) {
-    const ctx = canvas.getContext('2d');
+    const ctx = context2d(canvas, { label: `screen: ${work.title}` });
     // The canvas element is allocated at a device-derived multiple of the
     // logical size (see scene/textureBudget.js) for crisp text; everything below
     // draws in logical coordinates and this transform maps it up to real pixels.

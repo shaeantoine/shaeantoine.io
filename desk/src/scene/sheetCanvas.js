@@ -1,6 +1,7 @@
 import { FONT_FAMILY } from './screenCanvas.js';
 import { stockFor } from './pageCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
+import { context2d } from '../core/draw.js';
 
 /**
  * The face of the printout on top of the paper stack — a title block, two
@@ -173,7 +174,9 @@ function drawFigure(ctx, { x, y, width, height, ink, random }) {
  *        part's own colour and is only a fallback for the ground.
  */
 export function drawSheet(canvas, { title, credit, color, paper = 'manuscript' }) {
-    const ctx = canvas.getContext('2d');
+    // Sized after the context, as the badge is: a canvas the canvas cap
+    // refused comes back smaller (core/draw.js context2d), and is drawn whole.
+    const ctx = context2d(canvas, { label: `top sheet: ${title}` });
     const width = canvas.width;
     const height = canvas.height;
     const stock = stockFor(paper);

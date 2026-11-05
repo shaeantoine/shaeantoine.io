@@ -3,6 +3,7 @@ import { drawLockScreen, drawGlass } from './screens.js';
 import { SCREEN, VIEWFINDER_PX, drawOsScreen, screenKey, transitionFor, TRANSITION_MS } from './phoneos.js';
 import { PHONE, mm } from './layout.js';
 import { CAMERA_ROLL } from './copy.js';
+import { context2d } from '../../core/draw.js';
 
 /**
  * The phone's OS, running: which screen the Pixel shows, the slides between
@@ -44,9 +45,22 @@ function offscreen(surface) {
     const canvas = document.createElement('canvas');
     canvas.width = surface.canvas.width;
     canvas.height = surface.canvas.height;
-    const g = canvas.getContext('2d');
+    // The screen canvas's size, unless the canvas cap refused it (core/draw.js
+    // context2d shrinks it in place): the transform is read after, and blit
+    // stretches a smaller buffer back over the screen.
+    const g = context2d(canvas, { label: 'phone transition buffer' });
     g.setTransform(canvas.width / surface.width, 0, 0, canvas.height / surface.height, 0, 0);
     return { canvas, g };
+}
+
+/**
+ * A transition buffer onto the screen canvas at (x, y). At its own size — the
+ * three-argument drawImage, as it always was — when it is the screen's size,
+ * which is every time but a refused one; else scaled to the screen's.
+ */
+function blit(g, source, x, y, cw, ch) {
+    if (source.width === cw && source.height === ch) g.drawImage(source, x, y);
+    else g.drawImage(source, x, y, cw, ch);
 }
 
 function clearCanvas({ canvas, g }) {
@@ -143,23 +157,23 @@ export function createPhoneOs(ctx) {
         if (kind === 'unlock') {
             // The lock screen swipes up and away; the launcher rises a little into place under it.
             g.globalAlpha = 0.35 + 0.65 * e;
-            g.drawImage(b.canvas, 0, Math.round((1 - e) * ch * 0.05));
+            blit(g, b.canvas, 0, Math.round((1 - e) * ch * 0.05), cw, ch);
             g.globalAlpha = 1 - 0.35 * e;
-            g.drawImage(a.canvas, 0, -Math.round(e * ch));
+            blit(g, a.canvas, 0, -Math.round(e * ch), cw, ch);
         } else if (kind === 'push') {
             g.globalAlpha = 1 - 0.6 * e;
-            g.drawImage(a.canvas, -Math.round(e * cw * 0.3), 0);
+            blit(g, a.canvas, -Math.round(e * cw * 0.3), 0, cw, ch);
             g.globalAlpha = 1;
-            g.drawImage(b.canvas, Math.round((1 - e) * cw), 0);
+            blit(g, b.canvas, Math.round((1 - e) * cw), 0, cw, ch);
         } else if (kind === 'pop') {
             g.globalAlpha = 0.4 + 0.6 * e;
-            g.drawImage(b.canvas, -Math.round((1 - e) * cw * 0.3), 0);
+            blit(g, b.canvas, -Math.round((1 - e) * cw * 0.3), 0, cw, ch);
             g.globalAlpha = 1;
-            g.drawImage(a.canvas, Math.round(e * cw), 0);
+            blit(g, a.canvas, Math.round(e * cw), 0, cw, ch);
         } else {
-            g.drawImage(a.canvas, 0, 0);
+            blit(g, a.canvas, 0, 0, cw, ch);
             g.globalAlpha = e;
-            g.drawImage(b.canvas, 0, 0);
+            blit(g, b.canvas, 0, 0, cw, ch);
         }
         g.restore();
         drawGlass(g, SCREEN.w, SCREEN.h);

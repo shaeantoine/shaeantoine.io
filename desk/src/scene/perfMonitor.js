@@ -81,7 +81,8 @@ export const JANK_FRAME_MS = 50;
  * ORDERED BY WHAT IS LEAST MISSED, not by what saves the most. Each rung gives
  * up strictly more than the one above it:
  *
- *   1. `full` — what every machine starts on.
+ *   1. `full` — what every desktop starts on. (The phone tier starts at
+ *      `no-ao`; see createQualityGovernor's `start`.)
  *   2. `coarse-ao` — the AO buffer drops from half to just over a third of the
  *      frame's linear size, which is another ~2x off the most expensive pass in
  *      the renderer and is very nearly invisible on a signal this soft. This is
@@ -169,7 +170,17 @@ export function createFrameStats(capacity = 120) {
  * Watches frame intervals and steps down the quality ladder when a full window
  * of them misses the budget.
  *
+ * WHERE IT STARTS is the top rung unless told otherwise. The phone tier starts
+ * it at `no-ao` (core/flags.js `tier`), because the phone's pipeline is built
+ * without the AO pass at all and the rungs above that one would be asking for a
+ * pass that is not there — `coarse-ao` turns AO back ON. Starting below them
+ * keeps the ladder honest about what is being drawn, and leaves the phone the
+ * one move that still means something to it, `reduced-resolution`. The ratchet
+ * is unchanged: one way, from wherever it started.
+ *
  * @param {object} [options]
+ * @param {string} [options.start] the name of the rung to start on; the top
+ *        one if omitted or unknown.
  * @param {(tier: object, index: number) => void} [options.onChange] applied by
  *        the caller — this module decides, it does not touch the renderer.
  * @returns a governor. Feed it `record(dt)` once per rendered frame that
@@ -180,9 +191,10 @@ export function createQualityGovernor({
     tiers = QUALITY_TIERS,
     budgetMs = FRAME_BUDGET_MS,
     windowFrames = WINDOW_FRAMES,
+    start,
     onChange
 } = {}) {
-    let index = 0;
+    let index = start === undefined ? 0 : Math.max(0, tiers.findIndex((tier) => tier.name === start));
     let window = [];
 
     return {

@@ -41,6 +41,14 @@
  * resting top sheet — keep their own pixels-per-world-unit constants and take
  * `deviceScaleFor` instead, which is the same idea with the angular size baked
  * into the constant rather than measured.
+ *
+ * "HEIGHT" MEANS THE SHORTER SIDE, which is the one amendment the argument
+ * above needs and the reason `textureBudgetHeight` exists. Everything here was
+ * reasoned, and measured, in landscape, where the height is the shorter side
+ * and nothing changes. Held upright, a phone's buffer is taller than a laptop's
+ * while the shots are fitted to its narrow width, and budgeting by the height
+ * there cost 510 MB of canvases at 390 x 844 @3 — more than iOS will give a tab
+ * in total. See textureBudgetHeight.
  */
 /**
  * Ceiling on a single canvas texture, in pixels. 6 MP is ~24 MB as RGBA,
@@ -97,16 +105,60 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const DEFAULT_FRAMING = [0.5, 0.5];
 
 /**
- * The buffer height to use when the scene has not published one yet.
+ * The height a `width` x `height` drawing buffer is budgeted as: its shorter
+ * side. What DeskScene publishes as getTextureBudgetHeight, and what every
+ * `bufferHeight` below means.
  *
- * DeskScene's real value is authoritative because it is post-clamp, but it is
- * zero until the first layout, and a canvas built in that window would be
- * sized from nothing. The window's own device height is the right guess: it is
- * what the buffer will be unless the area budget engages.
+ * IN LANDSCAPE THIS IS THE HEIGHT, exactly, so a window at least as wide as it
+ * is tall gets every number it got before this existed. The argument for the
+ * height holds there in full: three's fov is vertical, the shots are framed by
+ * height, and the width only stops a subject that would overflow it sideways.
+ *
+ * IN PORTRAIT THE WIDTH IS WHAT BINDS. The shots are fitted to the frame's width
+ * as well as its height (framing.js: `maxWidthFraction`, `maxWidthFill`, and an
+ * establishing shot that backs away below 3:2), and on a phone held upright it
+ * is the width that runs out first: the camera backs off until the subject fits
+ * sideways, and the subject spans a fraction of a buffer 1170 px wide, not of
+ * one 2532 px tall. Budgeting by the height handed the monitor's screen a
+ * 3274 x 1832 canvas inside a frame 1170 px across — nearly three texels for
+ * every pixel it could cover, all of them minified away — and summed over the
+ * 102 canvases the desk builds at boot it came to 510 MB of 2D backing store at
+ * 390 x 844 @3, against 290 MB on a 1440 x 900 @2 laptop and the ~224–384 MB iOS
+ * Safari allows all of a tab's canvases together. Past that cap getContext('2d')
+ * returns null and whole modules fail to mount.
+ *
+ * The shorter side is the frame's extent on the axis that binds either way up,
+ * so a phone upright is budgeted exactly as the same phone on its side.
+ *
+ * WHAT IT GIVES UP, so it is not discovered later: it is a bound, not a
+ * measurement. In portrait a width-fitted subject fills ~0.9 of the width
+ * whatever its landscape framing was, so one framed wider than that in
+ * landscape (the monitor, 1.165 frame-heights across) comes out somewhat
+ * over-resolved, and one framed narrower (a page, 0.607) covers up to ~1.45x
+ * more than this allows for. At DPR 2 the MIN_SCALE floor below catches most of that for the
+ * pages; if type on an upright phone ever reads soft, the fix is portrait
+ * framings measured off the portrait cameras, not a return to the height.
+ */
+export function textureBudgetHeight(width, height) {
+    return Math.min(width, height);
+}
+
+/**
+ * The budget height to use when the scene has not published one.
+ *
+ * DeskScene's value is authoritative because it is post-clamp, and it now
+ * answers before its first layout too, with a prediction of its own buffer
+ * (on the phone tier, cuts and all — see predictTextureBudgetHeight there), so
+ * this is reached only by a caller with no scene to ask. The window's own
+ * device size is the right guess for one: it is what the buffer will be unless
+ * an area budget engages. Its shorter side, for the reason above — which in a
+ * landscape window is `innerHeight * devicePixelRatio`, as it always was.
  */
 function fallbackBufferHeight() {
     if (typeof window === 'undefined') return 1080;
-    return (window.innerHeight || 1080) * (window.devicePixelRatio || 1);
+    // A missing width constrains nothing; a missing height falls back as before.
+    const shorter = textureBudgetHeight(window.innerWidth || Infinity, window.innerHeight || 1080);
+    return shorter * (window.devicePixelRatio || 1);
 }
 
 /**
@@ -124,7 +176,10 @@ function fallbackBufferHeight() {
  *
  * `framing` is that angular size, measured rather than guessed: both extents in
  * units of the buffer's height. It is a property of the shot, so it
- * goes stale if a focus camera is retuned and nothing at runtime can tell.
+ * goes stale if a focus camera is retuned and nothing at runtime can tell. It
+ * was measured in landscape, which is why the height it multiplies is the
+ * budget height — the buffer's shorter side (see textureBudgetHeight), which a
+ * landscape buffer's height is.
  *
  * THE LARGER AXIS WINS. A page seen at 30° off-normal is foreshortened
  * vertically and not horizontally, so its footprint is a different shape from
@@ -141,8 +196,9 @@ function fallbackBufferHeight() {
  * @param {object} options
  * @param {[number, number]} options.framing width and height on screen, in
  *        units of the drawing buffer's height.
- * @param {number} options.bufferHeight the budgeted drawing buffer's height in
- *        device pixels — DeskScene's, after its area clamp, not the window's.
+ * @param {number} options.bufferHeight the budget height in device pixels —
+ *        DeskScene.getTextureBudgetHeight(): the shorter side of its buffer,
+ *        after its clamps, not the window's.
  * @param {number} [options.maxScale]
  * @param {number} [options.maxPixels]
  * @param {number} [options.minScale]
@@ -189,9 +245,13 @@ export function createFootprintCanvas(logicalWidth, logicalHeight, options) {
  * and on a 3x panel, where it is two thirds of them.
  *
  * This tracks the buffer instead, so the tuned size holds its meaning: 1.0 at
- * the reference, more on a denser display, less on a sparser one.
+ * the reference, more on a denser display, less on a sparser one. It takes the
+ * budget height like everything here: in landscape the height the constants
+ * were tuned against, and on an upright phone the width its shots are fitted
+ * to, since that is what the badge is seen across there.
  *
- * @param {number} bufferHeight the budgeted drawing buffer height, device px
+ * @param {number} bufferHeight the budget height, device px —
+ *        DeskScene.getTextureBudgetHeight()
  * @param {number} [reference] the buffer height the constants were tuned at —
  *        a 1512 x 945 laptop at DPR 2, which is where they measure ~1:1.
  */

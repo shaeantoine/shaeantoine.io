@@ -172,9 +172,27 @@ html, body {
     display: block;
     width: 100%;
     height: 100%;
+    /* A finger on the room is the room's: no pan, pinch or double-tap zoom of
+       the page under it. Nothing is lost — the page has nothing to scroll (all
+       of it is fixed over a fixed canvas) — and the one drag the room reads, the
+       monitor's home page under a finger (modules/monitor/index.js onTouchMove),
+       still gets every touch event; it no longer has to win its preventDefault
+       against a scroll the browser has already begun. Taps are still clicks:
+       touch-action governs panning and zooming, not the click a tap sends. */
+    touch-action: none;
+    /* iOS flashes a grey box over anything with a click listener when it is
+       tapped — here, the whole viewport. */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .desk-canvas[hidden] { display: none; }
+
+/* Phones and tablets: no rubber-band bounce or pull-to-refresh from a drag
+   that starts on the header or a button, the parts of the page touch-action
+   above does not cover. One refresh of this page is a full reload of the room. */
+@media (pointer: coarse) {
+    html, body { overscroll-behavior: none; }
+}
 
 .desk-object-label {
     position: fixed;

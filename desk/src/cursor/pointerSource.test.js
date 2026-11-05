@@ -187,6 +187,45 @@ describe('createPointerSource', () => {
         expect(source.ndcForEvent({ clientX: 200, clientY: 0 })).toEqual({ x: 1, y: 1 });
     });
 
+    it('hands out no move for a finger, which has no hover to drive', () => {
+        const onMove = vi.fn();
+        source.onMove(onMove);
+        canvas.emit('pointermove', { clientX: 10, clientY: 10, pointerType: 'touch' });
+        expect(clock.queued).toBe(0);
+        clock.step();
+        expect(onMove).not.toHaveBeenCalled();
+    });
+
+    it('still hands out mouse and pen moves', () => {
+        const seen = [];
+        source.onMove((ndc) => seen.push(ndc));
+        canvas.emit('pointermove', { clientX: 100, clientY: 50, pointerType: 'mouse' });
+        clock.step();
+        canvas.emit('pointermove', { clientX: 200, clientY: 0, pointerType: 'pen' });
+        clock.step();
+        expect(seen).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    });
+
+    it('does not let a finger overwrite a queued mouse position', () => {
+        const seen = [];
+        source.onMove((ndc) => seen.push(ndc));
+        canvas.emit('pointermove', { clientX: 100, clientY: 50, pointerType: 'mouse' });
+        canvas.emit('pointermove', { clientX: 0, clientY: 0, pointerType: 'touch' });
+        clock.step();
+        expect(seen).toEqual([{ x: 0, y: 0 }]);
+    });
+
+    it('still reports the leave a lifted finger sends, which only ever clears', () => {
+        const onLeave = vi.fn();
+        source.onLeave(onLeave);
+        canvas.emit('pointerleave', { pointerType: 'touch' });
+        expect(onLeave).toHaveBeenCalledTimes(1);
+    });
+
+    it('still converts a tap for the click path', () => {
+        expect(source.ndcForEvent({ clientX: 100, clientY: 50, pointerType: 'touch' })).toEqual({ x: 0, y: 0 });
+    });
+
     it('shares the cached box with the uncoalesced path', () => {
         source.ndcForEvent({ clientX: 1, clientY: 1 });
         source.ndcForEvent({ clientX: 2, clientY: 2 });

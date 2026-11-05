@@ -1,3 +1,5 @@
+import { context2d } from '../../core/draw.js';
+
 /**
  * The dot's light: the textures for the glowing dot and its trail.
  *
@@ -59,14 +61,18 @@ function radialCanvas(size, light) {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
-    const g = canvas.getContext('2d');
-    const image = g.createImageData(size, size);
-    const half = size / 2;
-    for (let y = 0; y < size; y += 1) {
-        for (let x = 0; x < size; x += 1) {
+    const g = context2d(canvas, { label: `the dot's ${size}² light` });
+    // `size`, unless the canvas cap refused it (core/draw.js context2d shrinks
+    // it in place): the profile is then drawn whole at the size there is,
+    // rather than its top-left quarter at the size asked for.
+    const n = canvas.width;
+    const image = g.createImageData(n, n);
+    const half = n / 2;
+    for (let y = 0; y < n; y += 1) {
+        for (let x = 0; x < n; x += 1) {
             const rho = Math.hypot(x + 0.5 - half, y + 0.5 - half) / half;
             const [r, gg, b] = rho >= 1 ? [0, 0, 0] : light(rho);
-            const i = (y * size + x) * 4;
+            const i = (y * n + x) * 4;
             image.data[i] = toSrgbByte(r);
             image.data[i + 1] = toSrgbByte(gg);
             image.data[i + 2] = toSrgbByte(b);

@@ -10,6 +10,9 @@ import { buildPartsGroup } from './partMesh.js';
 import { createPointerSource } from '../cursor/pointerSource.js';
 import { createFrameStats, createQualityGovernor } from './perfMonitor.js';
 import { createPerfHud, perfHudRequested } from './perfHud.js';
+import { textureBudgetHeight } from './textureBudget.js';
+// Imported as deviceTier: `tier` inside this file is the quality governor's rung.
+import { tier as deviceTier, phoneTier } from '../core/flags.js';
 
 /**
  * The most pixels this scene will shade in one frame, whatever the display
@@ -39,6 +42,118 @@ import { createPerfHud, perfHudRequested } from './perfHud.js';
  * `qualityRenderScale` below.
  */
 const MAX_DRAWING_BUFFER_PIXELS = 8.3e6;
+
+/**
+ * What the phone tier (core/flags.js `tier`) changes about the renderer. All of
+ * it is decided before the first allocation and none of it is revisited; the
+ * desktop is built exactly as it was, by passing none of it.
+ *
+ * MEMORY, NOT SPEED, IS WHAT THESE ARE FOR, which is why they are a tier and
+ * not more rungs on the quality governor. The governor answers "is this
+ * machine dropping frames?" by watching it. Nothing can watch a tab run out of
+ * memory, because iOS answers that by ending the tab: the loading bar nearly
+ * finishes, Safari reloads the page and says "A problem occurred". By the time
+ * there is anything to measure there is no page to measure it in, so the
+ * phone's budget has to be right up front.
+ *
+ *   maxPixelRatio      2      The buffer is drawn at no more than 2 device
+ *                             pixels per CSS pixel: 780 x 1688 rather than
+ *                             1170 x 2532 at 390 x 844 @3, 1.3 MP instead of
+ *                             3.0, and every screen-sized target scales with
+ *                             it. The compositor stretches it 1.5x onto the
+ *                             panel — a non-integer resample, the softness
+ *                             setSize below goes to such lengths to avoid on a
+ *                             desktop — and on a 460 ppi panel at arm's length
+ *                             it is the cheapest 2.25x of memory in the scene.
+ *   maxPixels          2.2 MP The phone tier's own area budget, for the devices
+ *                             the ratio alone does not bring down — an iPad Pro
+ *                             at DPR 2 is 5.7 MP. No phone reaches it; the
+ *                             largest at DPR 2 is ~1.7 MP. SET BY THE CANVASES,
+ *                             NOT THE FRAME: every tablet lands on this area,
+ *                             so its shorter side is every tablet's texture
+ *                             budget (textureBudget.js) — 1284 px on a 12.9"
+ *                             iPad, the squarest and so the largest. At 2.5 MP
+ *                             (1369 px) a tour of every route there held 222 MB
+ *                             of canvases, against 224 MB at the low end of
+ *                             iOS's per-tab canvas cap: the last page opened
+ *                             came up at a quarter of its pixels (core/draw.js
+ *                             context2d). At 2.2 the same tour holds 201 MB,
+ *                             for 6% off the frame's resolution in each axis.
+ *                             The cap on a real iPad is likely higher than
+ *                             224 MB; this was set against the worst case.
+ *   samples            2      MSAA on the composer's one multisampled target,
+ *                             half the renderbuffers of 4x (renderPipeline.js).
+ *   ambientOcclusion   off    No GTAO pass at all, and the governor starts on
+ *                             its `no-ao` rung to match (perfMonitor.js).
+ *   shadow maps        1024² for the key, 512² for each gallery spot
+ *                             (lighting.js), down from 2048² and 1024².
+ *
+ * Together they take the render targets at 390 x 844 @3 from ~320 MB to
+ * ~95 MB (by the same estimate perfHud.js makes): the composer's targets
+ * shrink with the area and again with the samples, the AO pass's are never
+ * built, and the shadow maps go from 48 MB to 12. The canvases and the GLB
+ * textures, the rest of the tab, are cut by the texture budget's portrait
+ * rule (scene/textureBudget.js) and the phone texture cap (loaders/gltf.js).
+ */
+const PHONE_RENDER = Object.freeze({
+    maxPixelRatio: 2,
+    maxPixels: 2.2e6,
+    samples: 2,
+    ambientOcclusion: false,
+    keyShadowMapSize: 1024,
+    artShadowMapSize: 512
+});
+
+/**
+ * The phone tier's cut of a `width` x `height` device-pixel box drawn at
+ * `ratio` device pixels per CSS pixel: down to PHONE_RENDER.maxPixelRatio, and
+ * then to PHONE_RENDER.maxPixels if that is still too many. A box that needs
+ * neither comes back untouched, so a DPR-2 phone keeps its exact device box.
+ *
+ * Exported for the node harness, whose stand-in scene has to size its buffer
+ * the way this one does or every canvas it measures is sized from the wrong
+ * height.
+ */
+export function phoneBufferSize(width, height, ratio) {
+    let scale = Math.min(1, PHONE_RENDER.maxPixelRatio / (ratio || 1));
+    const pixels = width * height * scale * scale;
+    if (pixels > PHONE_RENDER.maxPixels) scale *= Math.sqrt(PHONE_RENDER.maxPixels / pixels);
+    if (scale >= 1) return { width, height };
+    return {
+        width: Math.max(1, Math.round(width * scale)),
+        height: Math.max(1, Math.round(height * scale))
+    };
+}
+
+/**
+ * The texture budget height this scene WILL publish, worked out from the
+ * window, for the canvases built before its first layout.
+ *
+ * WHY A PREDICTION, when the old answer before layout was "0, use the window".
+ * That gap is not a moment: the canvas is unhidden and this scene built in one
+ * synchronous run, the modules mount right after it off warm caches, and
+ * ResizeObserver reports the first box only at the next rendering step — so
+ * the room's own `parts` are always sized in it, and whatever the modules build
+ * before that step is too. The window's device height was a fine guess for a
+ * desktop, whose buffer it is. On the phone tier it is wrong by the tier's
+ * whole cut — a DPR-3 phone's window is 1.5x the buffer in each axis — and a
+ * boot sized at DPR 3 is precisely the allocation the tier exists to stop.
+ *
+ * So the phone tier's cut is applied here as setSize applies it. The desktop's
+ * 8.3 MP clamp is not, deliberately: the window-based guess never applied it,
+ * it engages only on a 5K-class panel filled edge to edge, and leaving it out
+ * keeps every desktop canvas exactly the size it was — on a desktop this is
+ * `min(innerWidth, innerHeight) * devicePixelRatio`, which in a landscape
+ * window is the old fallback to the bit (scene/textureBudget.js).
+ */
+export function predictTextureBudgetHeight() {
+    if (typeof window === 'undefined') return 0;
+    const ratio = window.devicePixelRatio || 1;
+    let width = window.innerWidth * ratio;
+    let height = window.innerHeight * ratio;
+    if (phoneTier) ({ width, height } = phoneBufferSize(width, height, ratio));
+    return textureBudgetHeight(width, height) || 0;
+}
 
 // A dim, slightly warm grey rather than the old near-white. This only shows
 // through slivers past the wall, but at the new exposure a bright background
@@ -241,10 +356,11 @@ function attachModel(group, model, onLoaded, onAttached) {
 export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverChange, isFocusActive, onObjectLoaded }) {
     /**
      * The height of the buffer actually being drawn, in device pixels, after
-     * the area clamp in setSize. Canvas-textured surfaces size themselves
-     * against this — see scene/textureBudget.js. Zero until the first layout,
-     * which is why every reader treats a falsy value as "not measured yet"
-     * rather than as a real height.
+     * the clamps in setSize. Canvas-textured surfaces size themselves against
+     * it and its width — through textureBudgetHeightNow, below; see
+     * scene/textureBudget.js. Zero until the first layout, which is why every
+     * reader treats a falsy value as "not measured yet" rather than as a real
+     * height.
      *
      * DECLARED UP HERE, above every reader, on purpose. `let` is hoisted into a
      * temporal dead zone rather than to `undefined`, so a declaration sitting
@@ -253,6 +369,27 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
      * built, and the page renders empty white with only the DOM header on it.
      */
     let drawingBufferHeight = 0;
+    /** Its width, alongside, for the texture budget — see textureBudgetHeightNow. */
+    let drawingBufferWidth = 0;
+
+    /**
+     * What canvas textures are budgeted against: the shorter side of the
+     * buffer being drawn once it is measured, and the prediction of it before
+     * then. Published as getTextureBudgetHeight, and handed to the room's own
+     * `parts` below.
+     *
+     * KEPT APART FROM getDrawingBufferHeight on purpose. That one means "the
+     * height of the buffer being drawn, 0 until measured", and stays meaning
+     * it; this one is a budget, which in an upright window is the width (see
+     * scene/textureBudget.js textureBudgetHeight) and is never 0 in a browser.
+     * A function declaration, so hoisting makes it callable from the
+     * object-building loop below — the variables it reads are declared above
+     * it, for the reason given on drawingBufferHeight.
+     */
+    function textureBudgetHeightNow() {
+        if (drawingBufferHeight) return textureBudgetHeight(drawingBufferWidth, drawingBufferHeight);
+        return predictTextureBudgetHeight();
+    }
 
     /**
      * The quality governor's multiplier on the drawing buffer, 1 until it has
@@ -296,7 +433,7 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     // The scheduler decides when geometry has actually moved and sets
     // `needsUpdate` for exactly those frames (see the render callback below).
     // That flag is global, so it covers the key's 2048² and both gallery spots'
-    // 1024² together.
+    // 1024² together (1024² and 512² on the phone tier — see PHONE_RENDER).
     renderer.shadowMap.autoUpdate = false;
 
     const scene = new THREE.Scene();
@@ -316,7 +453,10 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
 
-    createDaylight(scene);
+    createDaylight(scene, phoneTier ? {
+        keyShadowMapSize: PHONE_RENDER.keyShadowMapSize,
+        artShadowMapSize: PHONE_RENDER.artShadowMapSize
+    } : undefined);
 
     // Read once and threaded to everything that samples a texture at a glancing
     // angle — the room's surfaces, and any part carrying art.
@@ -370,7 +510,7 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         // what told them apart — but parts are still added first, so the moment
         // something does again, a model arriving late lands beside them rather
         // than under them.
-        if (object.parts) group.add(buildPartsGroup(object.parts, anisotropy, drawingBufferHeight));
+        if (object.parts) group.add(buildPartsGroup(object.parts, anisotropy, textureBudgetHeightNow()));
         if (object.model) {
             modelLoads.push(attachModel(group, object.model, object.definesFloor
                 ? (localFloorY) => {
@@ -412,7 +552,13 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     const liftedGroups = new Set();
     let heldGroup = null;
 
-    const renderPipeline = createRenderPipeline(renderer, scene, camera);
+    // The phone tier is decided here, before the pipeline exists, because what
+    // it changes — the AO pass, the samples — is what the pipeline allocates on
+    // construction. See PHONE_RENDER.
+    const renderPipeline = createRenderPipeline(renderer, scene, camera, phoneTier ? {
+        ambientOcclusion: PHONE_RENDER.ambientOcclusion,
+        samples: PHONE_RENDER.samples
+    } : undefined);
 
     // -----------------------------------------------------------------------
     // Measured quality
@@ -423,6 +569,10 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
     // behind the budget, the window and the one-way ratchet.
     const frameStats = createFrameStats();
     const governor = createQualityGovernor({
+        // On the rung that matches a pipeline built without AO, so the ladder's
+        // first step down cannot turn AO back on. Undefined — the top — on a
+        // desktop.
+        start: phoneTier ? 'no-ao' : undefined,
         onChange(tier) {
             console.info(`[desk] Sustained frames over budget — dropping to quality tier "${tier.name}".`);
             renderPipeline.setAoScale(tier.aoScale);
@@ -446,7 +596,8 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
             stats: frameStats,
             governor,
             pipeline: renderPipeline,
-            getBufferSize: () => renderer.getDrawingBufferSize(bufferSize)
+            getBufferSize: () => renderer.getDrawingBufferSize(bufferSize),
+            deviceTier
         })
         : null;
 
@@ -519,6 +670,14 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         let width = exact.width;
         let height = exact.height;
 
+        // THE PHONE TIER'S CUT, and the one place this function knowingly
+        // gives up the exact device box everything below defends. On a phone
+        // the box is affordable in shading and not in memory, which no frame
+        // timing can see — see PHONE_RENDER for why that is a tier rather than
+        // a measurement, and phoneBufferSize for the arithmetic. Skipped
+        // entirely on a desktop.
+        if (phoneTier) ({ width, height } = phoneBufferSize(width, height, ratio));
+
         // BUDGETED BY AREA, NOT BY PIXEL RATIO, and the difference is the whole
         // point of this block.
         //
@@ -571,8 +730,12 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         // rather than `innerHeight * devicePixelRatio`, because the area clamp
         // above is exactly the case where the two differ — and sizing a page to
         // a buffer bigger than the one being drawn is how a texture ends up
-        // over-resolved on the machine least able to afford it.
+        // over-resolved on the machine least able to afford it. The width
+        // rides along so the budget can take the shorter of the two
+        // (textureBudgetHeightNow); the height alone stays what
+        // getDrawingBufferHeight reports.
         drawingBufferHeight = height;
+        drawingBufferWidth = width;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         // Every render target was just reallocated, so the next several frames
@@ -724,6 +887,144 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         }
     });
 
+    // -----------------------------------------------------------------------
+    // Losing the GPU
+    // -----------------------------------------------------------------------
+    // WHAT A LOST CONTEXT USED TO LOOK LIKE, which is the case for handling one
+    // at all. A phone under memory pressure, or one that has been in the
+    // background a while, can take the WebGL context away — on iOS 17+ WebGL
+    // lives in a separate GPU process, and when that process goes, so does
+    // every context in it. three notices — it logs the loss and quietly stops
+    // drawing — but nothing above it did: the scheduler went on queueing frames
+    // that were never drawn, and the canvas (three asks for an alpha context)
+    // went transparent, leaving an empty off-white page under the header with
+    // nothing to say why. If the browser ever handed the context back, three
+    // would rebuild its own state and nothing of ours — the PMREM environment is
+    // generated once and its generator thrown away, and the shadow maps are
+    // frozen until something moves — so the room would come back dark, unlit by
+    // its environment, with the poster wall in permanent shadow.
+    //
+    // So a loss stops the frame loop and says so, and a restore reloads the
+    // page, which rebuilds all of it the one way already known to work — once a
+    // minute at most (see onContextRestored). Nothing here runs unless a context
+    // is really lost.
+    const PAUSED_NOTE = 'The room was paused to save memory — tap to reload';
+    // When this tab last reloaded itself for a restored context, in
+    // sessionStorage because it has to outlive the reload it is counting.
+    const CONTEXT_RELOAD_KEY = 'desk:context-reload';
+    const CONTEXT_RELOAD_WINDOW_MS = 60000;
+    let contextLost = false;
+    let pausedNote = [];
+
+    /**
+     * The note, in the action row's language: a `.desk-button` that reloads,
+     * and a second one that only takes the note away, for a visitor who would
+     * rather keep what is on the page than tap.
+     */
+    function showPausedNote() {
+        if (pausedNote.length || typeof document === 'undefined') return;
+        const row = document.getElementById('desk-actions') ?? document.body;
+        const note = document.createElement('button');
+        note.type = 'button';
+        note.className = 'desk-button';
+        note.textContent = PAUSED_NOTE;
+        note.addEventListener('click', (event) => {
+            event.stopPropagation();
+            window.location.reload();
+        });
+        const dismiss = document.createElement('button');
+        dismiss.type = 'button';
+        dismiss.className = 'desk-button';
+        dismiss.textContent = '×';
+        dismiss.setAttribute('aria-label', 'Dismiss');
+        dismiss.addEventListener('click', (event) => {
+            event.stopPropagation();
+            removePausedNote();
+        });
+        row.append(note, dismiss);
+        pausedNote = [note, dismiss];
+    }
+
+    function removePausedNote() {
+        for (const element of pausedNote) element.remove();
+        pausedNote = [];
+    }
+
+    function onContextLost(event) {
+        // Without this the browser treats the loss as final and will never
+        // fire 'webglcontextrestored'. three's own listener does the same;
+        // saying it here as well means the reload below does not depend on it.
+        event.preventDefault();
+        if (contextLost) return;
+        contextLost = true;
+        console.warn('[desk] The WebGL context was lost; the room is paused until it is restored or the page reloads.');
+        // Every tick and the frame loop with them. Disposed rather than paused
+        // because nothing resumes it: the only way back is the reload.
+        scheduler.dispose();
+        // AND EVERYONE WAITING ON A FRAME IS LET GO, because none is coming: a
+        // disposed scheduler ignores invalidate(), so a whenDrawn() promise
+        // would never settle. The opening awaits one (src/main.js), and would
+        // hold the loading veil over this note until its ten-second deadline;
+        // window.__desk.settled() awaits two with no deadline at all, and would
+        // hang for good. Resolved rather than rejected — "the frame you asked
+        // for will not be drawn" is not an error any of them can act on, and
+        // the note already says what happened. whenDrawn answers the same way
+        // from here on.
+        for (const resolve of afterRender.splice(0)) resolve();
+        showPausedNote();
+    }
+
+    /**
+     * ONE AUTOMATIC RELOAD A MINUTE, and the note for anything past it.
+     *
+     * Reloading on every restore is a loop waiting to happen. Whatever took the
+     * context is usually still there when it comes back, and a boot is the most
+     * memory this page ever asks for, so a phone that loses the context while
+     * booting can lose it again on the next boot — lose, restore, reload, lose,
+     * with no end and no say for the visitor. Safari's "A problem repeatedly
+     * occurred" guard is for a page that crashes, not for one whose GPU process
+     * keeps dropping it, so nothing above this would stop it either.
+     *
+     * Inside the window the page stays paused and the note (put back, if it
+     * was dismissed — the room could come back now, which is new) leaves the
+     * reload to the visitor. Where sessionStorage will not keep the stamp, the
+     * reload is never automatic: a loop that cannot be counted cannot be
+     * stopped.
+     */
+    function onContextRestored() {
+        const now = Date.now();
+        let last = 0;
+        try {
+            last = Number(window.sessionStorage.getItem(CONTEXT_RELOAD_KEY)) || 0;
+        } catch { /* unreadable: as good as never */ }
+        if (now - last >= CONTEXT_RELOAD_WINDOW_MS) {
+            try {
+                window.sessionStorage.setItem(CONTEXT_RELOAD_KEY, String(now));
+                window.location.reload();
+                return;
+            } catch { /* the stamp would not stick; fall through to the note */ }
+        }
+        showPausedNote();
+    }
+
+    // A tab coming back to the front — from the background, or out of the
+    // back/forward cache, which restores the page without re-running anything —
+    // gets a fresh frame rather than trusting whatever the compositor kept of
+    // the last one. One frame when nothing else wants any: render-on-demand
+    // means nobody else would ask.
+    function onPageShow() {
+        scheduler.invalidate();
+    }
+
+    function onVisibilityChange() {
+        if (document.visibilityState === 'visible') scheduler.invalidate();
+    }
+
+    canvasEl.addEventListener('webglcontextlost', onContextLost);
+    canvasEl.addEventListener('webglcontextrestored', onContextRestored);
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     /**
      * Resolves once every model-backed object has been attached — or has
      * failed to load — and the room has been given its floor height.
@@ -750,8 +1051,12 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
      * first frame happens to be. Spending it behind the loading veil is the
      * difference between a reveal that starts moving immediately and one that
      * hitches on its own first frame.
+     *
+     * Once the context is lost it resolves at once: no frame will ever be drawn
+     * to wait for, and onContextLost has let go of every caller already waiting.
      */
     function whenDrawn() {
+        if (contextLost) return Promise.resolve();
         return new Promise((resolve) => {
             afterRender.push(resolve);
             // This scheduler by name rather than the module-level invalidate().
@@ -825,6 +1130,11 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
         unsubscribePointerMove();
         pointerSource.dispose();
         canvasEl.removeEventListener('click', onClick);
+        canvasEl.removeEventListener('webglcontextlost', onContextLost);
+        canvasEl.removeEventListener('webglcontextrestored', onContextRestored);
+        window.removeEventListener('pageshow', onPageShow);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        removePausedNote();
         resizeObserver.disconnect();
         perfHud?.dispose();
         renderPipeline.dispose();
@@ -845,8 +1155,13 @@ export function createDeskScene(canvasEl, deskObjects, { onEnterFocus, onHoverCh
          *  (core/context.js) so a page or a card built outside this module
          *  filters as well as the room's own surfaces do. */
         maxAnisotropy: anisotropy,
-        /** @see scene/textureBudget.js — the budgeted buffer height, device px. */
+        /** @see scene/textureBudget.js — the budgeted buffer height, device px:
+         *  what is being drawn, 0 until the first layout. */
         getDrawingBufferHeight: () => drawingBufferHeight,
+        /** What canvas textures are budgeted against, device px: the shorter
+         *  side of the budgeted buffer, predicted before the first layout. Never
+         *  0 in a browser. @see textureBudgetHeightNow, scene/textureBudget.js */
+        getTextureBudgetHeight: textureBudgetHeightNow,
         getObjectWorldPosition,
         getObjectGroup,
         getObjectScreenBox,

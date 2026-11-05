@@ -1,5 +1,6 @@
 import { FONT_FAMILY } from './screenCanvas.js';
 import { deviceScaleFor } from './textureBudget.js';
+import { context2d } from '../core/draw.js';
 
 /**
  * Lettering for a single book spine, drawn to a canvas used as the front face
@@ -96,7 +97,9 @@ function fitFontSize(ctx, text, weight, maxLength, maxSize) {
  * @param {{ title: string, author?: string, color: string }} spine
  */
 export function drawBookSpine(canvas, { title, author, color }) {
-    const ctx = canvas.getContext('2d');
+    // Sized after the context, as the badge is: a canvas the canvas cap
+    // refused comes back smaller (core/draw.js context2d), and is drawn whole.
+    const ctx = context2d(canvas, { label: `spine: ${title}` });
     const width = canvas.width;
     const height = canvas.height;
 

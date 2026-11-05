@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { footprintScaleFor, deviceScaleFor, MAX_CANVAS_PIXELS } from './textureBudget.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { footprintScaleFor, deviceScaleFor, textureBudgetHeight, MAX_CANVAS_PIXELS } from './textureBudget.js';
 
 /**
  * These run in node with no window, so every case passes `bufferHeight`
- * explicitly. That is also how the app calls it — DeskScene publishes the real
- * post-clamp height — and the window fallback inside exists only for the gap
- * before the first layout.
+ * explicitly — except the fallback's own cases at the bottom, which stub one.
+ * That is also how the app calls it — DeskScene publishes the real post-clamp
+ * budget height, and predicts it before the first layout — and the window
+ * fallback inside exists only for a caller with no scene to ask.
  */
 describe('footprintScaleFor', () => {
     // A 1512 x 945 laptop at DPR 2, the display the scene is tuned against.
@@ -108,5 +109,46 @@ describe('deviceScaleFor', () => {
         // Clamped: a badge is not worth 4x the texels whatever the panel says.
         expect(deviceScaleFor(100000)).toBe(2);
         expect(deviceScaleFor(10)).toBe(0.5);
+    });
+});
+
+describe('textureBudgetHeight', () => {
+    it('is the height, exactly, for any buffer at least as wide as it is tall', () => {
+        // THE DESKTOP GUARANTEE. Every number these budgets were tuned and
+        // measured with was a landscape buffer's height, and a landscape window
+        // has to keep getting it to the bit — 2.5x DPR and 5K-clamped included.
+        for (const [width, height] of [[2880, 1800], [1920, 1080], [2624, 406], [5120, 2880], [3274.5, 1831.25], [1000, 1000]]) {
+            expect(textureBudgetHeight(width, height)).toBe(height);
+        }
+    });
+
+    it('is the width once the buffer stands upright, where the width is what the shots fit', () => {
+        // 390 x 844 @3, the phone the 510 MB of boot canvases was measured on:
+        // its shots are fitted to 1170 px of width, not 2532 of height.
+        expect(textureBudgetHeight(1170, 2532)).toBe(1170);
+    });
+
+    it('budgets a phone upright exactly as the same phone on its side', () => {
+        const upright = footprintScaleFor(1787, 1000, { framing: [1.165, 0.652], bufferHeight: textureBudgetHeight(1170, 2532) });
+        const onItsSide = footprintScaleFor(1787, 1000, { framing: [1.165, 0.652], bufferHeight: textureBudgetHeight(2532, 1170) });
+        expect(upright).toBe(onItsSide);
+    });
+});
+
+describe('the window fallback', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    const SCREEN = { framing: [1.165, 0.652] };
+
+    it('is innerHeight x devicePixelRatio in a landscape window, as it always was', () => {
+        vi.stubGlobal('window', { innerWidth: 1512, innerHeight: 945, devicePixelRatio: 2.5 });
+        expect(footprintScaleFor(1787, 1000, SCREEN)).toBe(footprintScaleFor(1787, 1000, { ...SCREEN, bufferHeight: 945 * 2.5 }));
+        expect(deviceScaleFor(0)).toBe(deviceScaleFor(945 * 2.5));
+    });
+
+    it('takes the shorter side of a portrait window', () => {
+        vi.stubGlobal('window', { innerWidth: 390, innerHeight: 844, devicePixelRatio: 3 });
+        expect(footprintScaleFor(1787, 1000, SCREEN)).toBe(footprintScaleFor(1787, 1000, { ...SCREEN, bufferHeight: 1170 }));
+        expect(deviceScaleFor(0)).toBe(deviceScaleFor(1170));
     });
 });

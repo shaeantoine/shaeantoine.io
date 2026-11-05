@@ -43,6 +43,9 @@ const MIN_VEIL_MS = 500; // the veil stays up at least this long, so it never ju
 const VEIL_FADE_MS = 700; // src/style.css .loading-veil
 const OPENING_BUDGET_MS = 10000; // past this, the room is shown as far as it got
 const SETTLE_TIMEOUT_MS = 30000;
+// #webgl-fallback's sentence when WebGL is there but the room could not be built
+// on it (index.html's own is the one for no WebGL at all).
+const ROOM_FAILED = 'Something went wrong drawing the room. Reload to try again.';
 
 const headerEl = document.getElementById('site-header');
 const canvasEl = document.getElementById('desk-canvas');
@@ -417,10 +420,27 @@ async function settled({ timeoutMs = SETTLE_TIMEOUT_MS } = {}) {
 
 function isWebglAvailable() {
     try {
-        return Boolean(document.createElement('canvas').getContext('webgl2'));
+        // Only a probe, so it is let go at once rather than left to the
+        // collector: until then a context holds its share of GPU memory, and on
+        // a phone the room's renderer is about to want all of it there is.
+        const gl = document.createElement('canvas').getContext('webgl2');
+        gl?.getExtension?.('WEBGL_lose_context')?.loseContext();
+        return Boolean(gl);
     } catch {
         return false;
     }
+}
+
+/**
+ * The page without the room: the fallback's sentence where the canvas was, and
+ * no header (nothing in it works without the room). `message` replaces
+ * index.html's, which is the one for no WebGL at all.
+ */
+function showFallback(message) {
+    canvasEl.hidden = true;
+    if (message) (fallbackEl.querySelector('p') ?? fallbackEl).textContent = message;
+    fallbackEl.hidden = false;
+    veilEl.hidden = true;
 }
 
 function setLoadProgress(fraction) {
@@ -509,17 +529,21 @@ async function start() {
         await untilDeadline(applyRoute(firstRoute, { instant: true }), `the first route (${firstRoute.hash})`, deadline);
         await untilDeadline(deskScene.whenDrawn(), 'the first frame', deadline);
     } catch (error) {
-        console.error('[desk] The opening sequence failed; showing the room as far as it got.', error);
+        console.error(`[desk] The opening sequence failed; ${deskScene ? 'showing the room as far as it got' : 'there is no room to show'}.`, error);
     } finally {
         if (!still) await wait(MIN_VEIL_MS - (performance.now() - openedAt));
-        reveal({ animateCamera: Boolean(camera) && firstRoute.moduleId === null && !INSTANT });
-        resolveReady({ ok: Boolean(deskScene), modules: runtimes.map((r) => r.module.id), failed });
+        // No desk scene: making it threw (three throws when the browser will not
+        // give its renderer a WebGL context, which a phone short of memory does),
+        // or the opening failed before it got that far. "As far as it got" would
+        // be an empty canvas under a header whose links go nowhere; say so instead.
+        if (deskScene) reveal({ animateCamera: Boolean(camera) && firstRoute.moduleId === null && !INSTANT });
+        else showFallback(ROOM_FAILED);
+        resolveReady({ ok: Boolean(deskScene), modules: runtimes.map((r) => r.module.id), failed: deskScene ? failed : [...failed, 'desk scene'] });
     }
 }
 
 if (!isWebglAvailable()) {
-    fallbackEl.hidden = false;
-    veilEl.hidden = true;
+    showFallback();
     resolveReady({ ok: false, modules: [], failed: ['webgl2 unavailable'] });
 } else {
     start();

@@ -40,8 +40,10 @@ import { track } from './track.js';
  * @param {[number, number]} [options.framing] or width/height directly, in frame
  *        heights (src/scene/textureBudget.js convention)
  * @param {number} [options.oversample=1.25] extra texels for crisp type
- * @param {number} [options.bufferHeight] DeskScene.getDrawingBufferHeight()
+ * @param {number} [options.bufferHeight] DeskScene.getTextureBudgetHeight() — the
+ *        shorter side of the buffer, which ctx.makeCanvas passes (textureBudget.js)
  * @param {number} [options.maxPixels] default 6 MP (the site's ceiling)
+ * @param {string} [options.label] names the canvas if the browser refuses it (context2d)
  * @returns {{ canvas: HTMLCanvasElement, g: CanvasRenderingContext2D, scale: number,
  *             width: number, height: number, clear(color?): void }}
  */
@@ -50,7 +52,8 @@ export function makeCanvas(logicalWidth, logicalHeight, {
     framing,
     oversample = 1.25,
     bufferHeight = 0,
-    maxPixels = MAX_CANVAS_PIXELS
+    maxPixels = MAX_CANVAS_PIXELS,
+    label
 } = {}) {
     const frame = framing ?? [fill * (logicalWidth / logicalHeight), fill];
     const scale = footprintScaleFor(logicalWidth, logicalHeight, {
@@ -62,12 +65,15 @@ export function makeCanvas(logicalWidth, logicalHeight, {
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(logicalWidth * scale));
     canvas.height = Math.max(1, Math.round(logicalHeight * scale));
-    const g = canvas.getContext('2d');
+    const asked = canvas.width;
+    // The transform is taken from the canvas AFTER the context: if the canvas
+    // cap refused it, context2d shrank it, and the logical units still span it.
+    const g = context2d(canvas, { label: label ?? `${logicalWidth} × ${logicalHeight} logical` });
     g.setTransform(canvas.width / logicalWidth, 0, 0, canvas.height / logicalHeight, 0, 0);
     return {
         canvas,
         g,
-        scale,
+        scale: scale * (canvas.width / asked), // as allocated (× 1 exactly, unless refused)
         width: logicalWidth,
         height: logicalHeight,
         clear(color) {
@@ -87,6 +93,119 @@ export function makeCanvas(logicalWidth, logicalHeight, {
 /** CanvasTexture tagged sRGB with the site's text sampling policy (mips + anisotropy). */
 export function canvasTexture(canvas, { anisotropy = 1 } = {}) {
     return applyTextTexturePolicy(new THREE.CanvasTexture(canvas), anisotropy);
+}
+
+// ---------------------------------------------------------------------------
+// 2D contexts, when the browser says no
+// ---------------------------------------------------------------------------
+
+let refusalWarned = false;
+
+/**
+ * canvas.getContext('2d') for every canvas on the site, with an answer for the
+ * one way it fails here.
+ *
+ * iOS Safari caps the backing-store memory of ALL of a page's live canvases
+ * together (224 to 384 MB, by device), and past the cap getContext returns
+ * null ("Total canvas memory use exceeds the maximum limit"). Nothing warns
+ * beforehand: WebKit checks as each context is created, against everything
+ * already allocated, so the canvas refused is simply whichever one asks next —
+ * and a room of a hundred canvas textures, sized from a 3x phone's drawing
+ * buffer (scene/textureBudget.js), gets there. Unchecked, the first
+ * g.setTransform on the null throws, and that one throw takes the whole
+ * module's mount with it: main.js leaves a module whose mount threw out of the
+ * room.
+ *
+ * So, on a refusal: the same canvas again at half its width and half its height
+ * (a quarter of the memory: softer type, the surface still there); then at
+ * 1 × 1 (one blank surface rather than a missing module); and if even that is
+ * refused, an inert stand-in that draws nothing (inertContext, below), so the
+ * painter still runs to its end. The canvas is resized IN PLACE, so code that
+ * derives its transform from canvas.width / canvas.height after this call —
+ * makeCanvas, the scene painters, the phone's transition buffers — paints the
+ * same picture at the smaller size with no further change.
+ *
+ * None of that runs when getContext answers: then this IS canvas.getContext,
+ * and not one pixel drawn through it differs. Warned about once per page — the
+ * first refusal, with its size and label; the rest are handled the same way,
+ * quietly.
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {object} [how]
+ * @param {object} [how.options] getContext's second argument, if the site passes one
+ * @param {string} [how.label] names the canvas in the warning
+ * @returns {CanvasRenderingContext2D}
+ */
+export function context2d(canvas, { options, label } = {}) {
+    const get = () => (options === undefined ? canvas.getContext('2d') : canvas.getContext('2d', options));
+    const g = get();
+    if (g) return g;
+    if (!refusalWarned) {
+        refusalWarned = true;
+        console.warn(`[desk] The browser refused a ${canvas.width} × ${canvas.height} canvas${label ? ` (${label})` : ''}: `
+            + 'the page is out of canvas memory (iOS Safari caps the total). It, and any refused after it, is drawn at '
+            + 'a quarter of the pixels, or left blank if even that is refused. Printed once.');
+    }
+    canvas.width = Math.max(1, Math.round(canvas.width / 2));
+    canvas.height = Math.max(1, Math.round(canvas.height / 2));
+    const quarter = get();
+    if (quarter) return quarter;
+    canvas.width = 1;
+    canvas.height = 1;
+    return get() ?? inertContext(canvas);
+}
+
+/**
+ * The context context2d hands back when even a 1 × 1 canvas is refused: every
+ * call accepted, nothing drawn. Enough of one for every painter here to run to
+ * its end — gradients and image data are real objects, the transform reads
+ * back as identity, and measureText estimates (half an em a character), so the
+ * wrapping and fitting that measure through it still terminate with sane
+ * numbers instead of laying everything out at zero width.
+ */
+function inertContext(canvas) {
+    const none = () => {};
+    const gradient = { addColorStop: none };
+    const imageData = (w, h) => {
+        const width = Math.max(1, Math.round(Number(w) || 1));
+        const height = Math.max(1, Math.round(Number(h) || 1));
+        return { width, height, data: new Uint8ClampedArray(width * height * 4) };
+    };
+    const g = {
+        canvas,
+        font: '10px sans-serif', letterSpacing: '0px', fillStyle: '#000000', strokeStyle: '#000000',
+        globalAlpha: 1, globalCompositeOperation: 'source-over', lineWidth: 1, lineCap: 'butt', lineJoin: 'miter',
+        miterLimit: 10, lineDashOffset: 0, textAlign: 'start', textBaseline: 'alphabetic', direction: 'inherit',
+        imageSmoothingEnabled: true, imageSmoothingQuality: 'low', filter: 'none',
+        shadowBlur: 0, shadowColor: 'rgba(0, 0, 0, 0)', shadowOffsetX: 0, shadowOffsetY: 0,
+        measureText(text) {
+            const size = Number(/(\d*\.?\d+)px/.exec(g.font)?.[1]) || 10;
+            return {
+                width: String(text).length * size * 0.5,
+                actualBoundingBoxLeft: 0, actualBoundingBoxRight: String(text).length * size * 0.5,
+                actualBoundingBoxAscent: size * 0.7, actualBoundingBoxDescent: size * 0.2,
+                fontBoundingBoxAscent: size * 0.8, fontBoundingBoxDescent: size * 0.2
+            };
+        },
+        createLinearGradient: () => gradient,
+        createRadialGradient: () => gradient,
+        createConicGradient: () => gradient,
+        createPattern: () => null,
+        createImageData: (w, h) => (typeof w === 'object' ? imageData(w.width, w.height) : imageData(w, h)),
+        getImageData: (_x, _y, w, h) => imageData(w, h),
+        getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, is2D: true, isIdentity: true }),
+        getLineDash: () => [],
+        isPointInPath: () => false,
+        isPointInStroke: () => false,
+        getContextAttributes: () => ({ alpha: true, willReadFrequently: false })
+    };
+    for (const name of ['save', 'restore', 'reset', 'scale', 'rotate', 'translate', 'transform', 'setTransform',
+        'resetTransform', 'fillRect', 'strokeRect', 'clearRect', 'beginPath', 'closePath', 'moveTo', 'lineTo',
+        'bezierCurveTo', 'quadraticCurveTo', 'arc', 'arcTo', 'ellipse', 'rect', 'roundRect', 'fill', 'stroke',
+        'clip', 'fillText', 'strokeText', 'drawImage', 'putImageData', 'setLineDash', 'drawFocusIfNeeded']) {
+        g[name] = none;
+    }
+    return g;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,7 +441,7 @@ export function grain(g, width, height, { seed = 'paper', amount = 0.05, tile = 
     const tileCanvas = document.createElement('canvas');
     tileCanvas.width = tile;
     tileCanvas.height = tile;
-    const t = tileCanvas.getContext('2d');
+    const t = context2d(tileCanvas, { label: 'paper grain tile' });
     const data = t.createImageData(tile, tile);
     for (let i = 0; i < data.data.length; i += 4) {
         const v = 255 - Math.round(r() * 255 * amount);
@@ -502,4 +621,4 @@ export function paint(drawFn) {
     }
 }
 
-export const draw = { makeCanvas, canvasTexture, wrap, text: drawText, handwriting: drawHandwriting, fit: fitText, fitHandwriting, note: drawNote, paint, grain, imageCover: drawImageCover, font };
+export const draw = { makeCanvas, canvasTexture, context2d, wrap, text: drawText, handwriting: drawHandwriting, fit: fitText, fitHandwriting, note: drawNote, paint, grain, imageCover: drawImageCover, font };

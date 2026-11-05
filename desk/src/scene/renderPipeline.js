@@ -150,9 +150,9 @@ function bufferType(renderer) {
     return canRenderHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
 }
 
-function affordableSamples(renderer) {
+function affordableSamples(renderer, wanted = MSAA_SAMPLES) {
     const gl = renderer.getContext();
-    return Math.min(MSAA_SAMPLES, gl.getParameter(gl.MAX_SAMPLES) ?? MSAA_SAMPLES);
+    return Math.min(wanted, gl.getParameter(gl.MAX_SAMPLES) ?? wanted);
 }
 
 /**
@@ -199,11 +199,32 @@ function affordableSamples(renderer) {
  * exactly that happen at runtime, the buffers are pinned at the top of every
  * frame instead of being left to work out. It costs two assignments and makes
  * the invariant true by construction rather than by counting.
+ *
+ * THE PHONE TIER BUILDS A SMALLER CHAIN (core/flags.js `tier`; DeskScene passes
+ * the options). `samples` caps the multisampled target — at 2 rather than 4,
+ * renderTarget2's multisample renderbuffers halve, which was the largest single
+ * allocation in the tab at 390 x 844 @3 (170 MB of the ~320 MB of targets).
+ * `ambientOcclusion: false` leaves the GTAO pass out entirely rather than
+ * building it disabled: not constructed, its G-buffer, AO and denoise targets
+ * can never be allocated, and the second scene pass it renders can never run.
+ * The governor is started at its no-AO rung to match (perfMonitor.js), so
+ * nothing ever asks for the pass back; the AO setters below are no-ops without
+ * it. Called without options — the desktop — this builds exactly what it
+ * always did.
+ *
+ * @param {object} [options]
+ * @param {number} [options.aoScale] @see AO_RESOLUTION_SCALE
+ * @param {boolean} [options.ambientOcclusion=true] false: no GTAO pass at all
+ * @param {number} [options.samples=4] the most MSAA samples to ask for
  */
-export function createRenderPipeline(renderer, scene, camera, { aoScale = AO_RESOLUTION_SCALE } = {}) {
+export function createRenderPipeline(renderer, scene, camera, {
+    aoScale = AO_RESOLUTION_SCALE,
+    ambientOcclusion = true,
+    samples: wantedSamples = MSAA_SAMPLES
+} = {}) {
     const size = renderer.getSize(new THREE.Vector2());
     const type = bufferType(renderer);
-    const samples = affordableSamples(renderer);
+    const samples = affordableSamples(renderer, wantedSamples);
 
     // Constructed WITHOUT multisampling, so that the clone EffectComposer makes
     // of it is un-multisampled too; the one that needs it is upgraded below.
@@ -218,16 +239,23 @@ export function createRenderPipeline(renderer, scene, camera, { aoScale = AO_RES
 
     composer.addPass(new RenderPass(scene, camera));
 
-    const gtaoPass = new ScaledGTAOPass(scene, camera, size.x, size.y, aoScale);
-    gtaoPass.output = GTAOPass.OUTPUT.Default;
-    gtaoPass.updateGtaoMaterial(AO_PARAMETERS);
-    gtaoPass.updatePdMaterial(DENOISE_PARAMETERS);
-    composer.addPass(gtaoPass);
+    // Absent rather than disabled on the phone tier — see the note above. The
+    // pin in render() is what keeps RenderPass on the multisampled target with
+    // or without it, since its absence changes the swap count exactly as
+    // disabling it does.
+    let gtaoPass = null;
+    if (ambientOcclusion) {
+        gtaoPass = new ScaledGTAOPass(scene, camera, size.x, size.y, aoScale);
+        gtaoPass.output = GTAOPass.OUTPUT.Default;
+        gtaoPass.updateGtaoMaterial(AO_PARAMETERS);
+        gtaoPass.updatePdMaterial(DENOISE_PARAMETERS);
+        composer.addPass(gtaoPass);
+    }
 
     composer.addPass(new OutputPass());
 
     return {
-        /** Set GTAOPass.OUTPUT.AO while tuning to see the raw occlusion buffer. */
+        /** Set GTAOPass.OUTPUT.AO while tuning to see the raw occlusion buffer. Null on the phone tier. */
         gtaoPass,
         render() {
             // The invariant the single-multisampled-target saving rests on.
@@ -246,17 +274,19 @@ export function createRenderPipeline(renderer, scene, camera, { aoScale = AO_RES
          * The one-line kill switch for the AO pass, reachable at runtime so
          * scene/perfMonitor.js can take it on a machine that
          * cannot afford the pass. Disabling it drops the contact occlusion and
-         * keeps tone mapping and MSAA.
+         * keeps tone mapping and MSAA. A no-op where the pass was never built.
          */
         setAmbientOcclusionEnabled(enabled) {
-            gtaoPass.enabled = enabled;
+            if (gtaoPass) gtaoPass.enabled = enabled;
         },
-        isAmbientOcclusionEnabled: () => gtaoPass.enabled,
-        /** @see AO_RESOLUTION_SCALE. Reallocates the pass's buffers. */
+        isAmbientOcclusionEnabled: () => (gtaoPass ? gtaoPass.enabled : false),
+        /** @see AO_RESOLUTION_SCALE. Reallocates the pass's buffers; a no-op without one. */
         setAoScale(scale) {
-            gtaoPass.setAoScale(scale);
+            gtaoPass?.setAoScale(scale);
         },
-        getAoScale: () => gtaoPass.aoScale,
+        getAoScale: () => (gtaoPass ? gtaoPass.aoScale : aoScale),
+        /** The MSAA samples renderTarget2 was actually given — after the tier's cap and the driver's. */
+        getSamples: () => samples,
         dispose() {
             // Disposes renderTarget1/2 too — renderTarget1 is the target
             // handed in above, and renderTarget2 is its clone.

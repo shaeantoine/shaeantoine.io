@@ -77,6 +77,19 @@ export function createPointerSource(canvasEl) {
     }
 
     function onPointerMove(event) {
+        // A FINGER HAS NO HOVER, so its moves are not handed out. Every
+        // subscriber reads a move as hover — DeskScene tints and lifts what is
+        // under it and the router floats its tooltip, the modules set a cursor
+        // — and under the canvas's `touch-action: none` (style.css) the browser
+        // no longer cuts a drag short by taking it for a pan, so a finger
+        // dragged across the desk would steer all of it for the whole drag.
+        // Nor would lifting it put anything back: DeskScene's hover is cleared
+        // only by a later move. A tap needs none of this — its click is read
+        // off the event (ndcForEvent) — and the one drag the room reads, the
+        // monitor's home page, listens to touch events of its own. Mouse and
+        // pen, which do hover, are untouched; so is the leave a lifted finger
+        // sends, which only ever clears.
+        if (event.pointerType === 'touch') return;
         // Only the latest position matters. Everything between this event and
         // the next frame is a position the visitor's pointer has already left.
         pendingX = event.clientX;

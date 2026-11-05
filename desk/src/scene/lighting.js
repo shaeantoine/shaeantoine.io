@@ -324,8 +324,30 @@ export function createWindowEnvironment() {
  * the contact under the poster frames. See ART_LIGHT_SHADOW_* above. The
  * scheduler only rebuilds any of them on frames where geometry actually moved,
  * so all three passes are rare besides.
+ *
+ * ON THE PHONE TIER the maps are a quarter of the area: the key (window or
+ * overhead) at 1024², the gallery spots at 512². DeskScene passes the sizes;
+ * nothing else about any light changes. Shadow maps are RGBA depth plus a depth
+ * renderbuffer, 8 bytes a texel, so the three cost 48 MB at the desktop's sizes
+ * and 12 MB at these — memory that a phone needs far more for the frame
+ * itself. What it gives up is edge resolution, and a phone's frame is small
+ * enough to hide most of it: by a rough count the key's 1024² still puts about
+ * one texel on each screen pixel of the desk in an upright phone's establishing
+ * shot — near what 2048² gives a laptop's much larger frame — and the posters' contact
+ * shadow keeps ~14 texels across its 0.10 units — still more than a soft
+ * gradient needs (see ART_LIGHT_SHADOW_MAP_SIZE). PCF's kernel is in texels, so
+ * every penumbra comes out about twice as wide, which reads as a softer
+ * window, not as a fault.
+ *
+ * @param {THREE.Scene} scene
+ * @param {object} [sizes] shadow map sizes, texels per side
+ * @param {number} [sizes.keyShadowMapSize=2048] the window's, or the overhead's after dark
+ * @param {number} [sizes.artShadowMapSize=1024] each gallery spot's
  */
-export function createDaylight(scene) {
+export function createDaylight(scene, {
+    keyShadowMapSize = SHADOW_MAP_SIZE,
+    artShadowMapSize = ART_LIGHT_SHADOW_MAP_SIZE
+} = {}) {
     const preset = activePreset();
 
     const sun = new THREE.SpotLight(preset.sun.color, preset.sun.intensity);
@@ -338,7 +360,7 @@ export function createDaylight(scene) {
     sun.map = createWindowGobo();
 
     sun.castShadow = preset.sun.castShadow;
-    sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    sun.shadow.mapSize.set(keyShadowMapSize, keyShadowMapSize);
     sun.shadow.camera.near = 0.5;
     sun.shadow.camera.far = 40;
     // normalBias offsets the shadow lookup along the surface normal, which is
@@ -354,8 +376,8 @@ export function createDaylight(scene) {
     bounce.position.set(BOUNCE_POSITION.x, BOUNCE_POSITION.y, BOUNCE_POSITION.z);
     scene.add(bounce);
 
-    const overhead = preset.overhead ? createOverhead(scene, preset.overhead) : null;
-    const art = [-ART_LIGHT_X, ART_LIGHT_X].map((x) => createArtLight(scene, preset.art, x));
+    const overhead = preset.overhead ? createOverhead(scene, preset.overhead, keyShadowMapSize) : null;
+    const art = [-ART_LIGHT_X, ART_LIGHT_X].map((x) => createArtLight(scene, preset.art, x, artShadowMapSize));
 
     return { sun, bounce, overhead, art };
 }
@@ -371,7 +393,7 @@ export function createDaylight(scene) {
  * on the posters — about half what the desk gets under the window, which is
  * the right relationship for lit art in a lit room.
  */
-function createArtLight(scene, config, x) {
+function createArtLight(scene, config, x, shadowMapSize = ART_LIGHT_SHADOW_MAP_SIZE) {
     const light = new THREE.SpotLight(config.color, config.intensity);
     light.position.set(x, ART_LIGHT_POSITION.y, ART_LIGHT_POSITION.z);
     light.target.position.set(x, ART_LIGHT_TARGET.y, ART_LIGHT_TARGET.z);
@@ -381,7 +403,7 @@ function createArtLight(scene, config, x) {
     light.distance = 0;
 
     light.castShadow = true;
-    light.shadow.mapSize.set(ART_LIGHT_SHADOW_MAP_SIZE, ART_LIGHT_SHADOW_MAP_SIZE);
+    light.shadow.mapSize.set(shadowMapSize, shadowMapSize);
     light.shadow.camera.near = ART_LIGHT_SHADOW_NEAR;
     light.shadow.camera.far = ART_LIGHT_SHADOW_FAR;
     light.shadow.bias = ART_LIGHT_SHADOW_BIAS;
@@ -424,7 +446,7 @@ function createArtLight(scene, config, x) {
  * the experience the source itself can be seen — and a source you cannot see
  * is still motivated as long as the light behaves like it came from up there.
  */
-function createOverhead(scene, config) {
+function createOverhead(scene, config, shadowMapSize = SHADOW_MAP_SIZE) {
     const light = new THREE.SpotLight(config.color, config.intensity);
     light.position.set(config.position.x, config.position.y, config.position.z);
     light.target.position.set(config.target.x, config.target.y, config.target.z);
@@ -434,7 +456,7 @@ function createOverhead(scene, config) {
     light.distance = 0;
 
     light.castShadow = config.castShadow;
-    light.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    light.shadow.mapSize.set(shadowMapSize, shadowMapSize);
     light.shadow.camera.near = 0.5;
     // Far enough to reach the carpet: the desktop is world y = 0 and the floor
     // sits ~2.8 below it, so from 7 above the desk the furthest thing this has

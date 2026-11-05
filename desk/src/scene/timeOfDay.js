@@ -195,7 +195,9 @@ export function timeOverrideFrom(search) {
     if (!search) return null;
     const raw = new URLSearchParams(search).get('time');
     if (raw === null) return null;
-    return { raw, valid: Object.hasOwn(TIME_PRESETS, raw) };
+    // Not Object.hasOwn, which Safari only has from 15.4: on an older iPhone a
+    // ?time= link would throw here, while the room's lighting is being built.
+    return { raw, valid: Object.prototype.hasOwnProperty.call(TIME_PRESETS, raw) };
 }
 
 /**

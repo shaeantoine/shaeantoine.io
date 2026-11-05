@@ -18,7 +18,9 @@
  *               while nothing is loading is the thing to chase.
  *   tier        Which rung of QUALITY_TIERS the governor has settled on. If
  *               this is anything but `full` on a machine you expected to cope,
- *               that is the finding.
+ *               that is the finding. The phone tier starts at `no-ao`.
+ *   device      The device tier (core/flags.js): `phone` or `desktop`. Open
+ *               with `?perf&tier=phone` to see what a phone is given.
  *   buffer      Pixels actually being shaded, after DeskScene's area budget and
  *               any tier downgrade. Compare against the display's real size to
  *               see whether the budget engaged.
@@ -95,7 +97,7 @@ const mp = (pixels) => `${(pixels / 1e6).toFixed(2)} MP`;
  *        state of its own beyond the throttle, so there is nothing here that
  *        can go stale or need invalidating.
  */
-export function createPerfHud({ renderer, stats, governor, pipeline, getBufferSize }) {
+export function createPerfHud({ renderer, stats, governor, pipeline, getBufferSize, deviceTier = 'desktop' }) {
     const el = document.createElement('div');
     el.setAttribute('style', STYLE);
     el.setAttribute('aria-hidden', 'true');
@@ -111,7 +113,10 @@ export function createPerfHud({ renderer, stats, governor, pipeline, getBufferSi
         const bytes = estimateTargetBytes({
             width,
             height,
-            samples: renderer.capabilities.maxSamples ?? 4,
+            // What renderTarget2 was actually given, not the driver's maximum:
+            // the pipeline asks for at most 4 (2 on the phone tier), and a GPU
+            // that offers 8 or 16 used to be charged for all of them here.
+            samples: pipeline.getSamples?.() ?? renderer.capabilities.maxSamples ?? 4,
             halfFloat: Boolean(renderer.extensions.get('EXT_color_buffer_float')),
             aoEnabled,
             aoScale
@@ -121,7 +126,7 @@ export function createPerfHud({ renderer, stats, governor, pipeline, getBufferSi
             `${stats.fps().toFixed(0)} fps   p95 ${stats.p95().toFixed(1)}ms`,
             `median ${stats.median().toFixed(1)}ms  worst ${stats.worst().toFixed(0)}ms`,
             `jank ${stats.jank} / ${stats.total}`,
-            `tier ${governor.tier.name}`,
+            `tier ${governor.tier.name}  device ${deviceTier}`,
             `buffer ${width}x${height}  ${mp(width * height)}`,
             `ao ${aoEnabled ? `${aoScale.toFixed(2)}x` : 'off'}`,
             `targets ~${mb(bytes)}`,

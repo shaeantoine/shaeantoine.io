@@ -1,4 +1,5 @@
 import { createFootprintCanvas } from './textureBudget.js';
+import { context2d } from '../core/draw.js';
 
 /**
  * Canvas rendering for a printed page: turns a `pagination.js` page descriptor
@@ -212,7 +213,8 @@ export function pageSetupFor(anchor) {
  */
 export function createMeasurer(stockId = DEFAULT_PAPER_STOCK) {
     const { font } = stockFor(stockId);
-    const ctx = document.createElement('canvas').getContext('2d');
+    // Measuring only: a refused one is no loss (screenCanvas.js createMeasurer).
+    const ctx = context2d(document.createElement('canvas'), { label: 'page text measurer' });
     return function measureWidth(text, fontSize) {
         ctx.font = `${fontSize}px ${font}`;
         return ctx.measureText(text).width;
@@ -228,7 +230,7 @@ export function createMeasurer(stockId = DEFAULT_PAPER_STOCK) {
 export function drawPage(canvas, pageItem, stockId = DEFAULT_PAPER_STOCK) {
     const stock = stockFor(stockId);
     const metrics = metricsFor(stockId);
-    const ctx = canvas.getContext('2d');
+    const ctx = context2d(canvas, { label: 'page' });
     // Same logical-coordinate scheme as screenCanvas.js: the element is
     // allocated at a device-derived multiple of it (see scene/textureBudget.js)
     // and everything below draws in logical px.

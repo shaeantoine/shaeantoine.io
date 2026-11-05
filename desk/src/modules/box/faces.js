@@ -1,7 +1,7 @@
 import { rng } from '../../core/rng.js';
 import { palette } from '../../core/palette.js';
 import { font } from '../../core/fonts.js';
-import { drawText, drawHandwriting, fitHandwriting, grain, drawImageCover, wrap } from '../../core/draw.js';
+import { drawText, drawHandwriting, fitHandwriting, grain, drawImageCover, wrap, context2d } from '../../core/draw.js';
 import { PRINT_BORDER, NOTE_RECTS, DIVIDER_MM, tabLeftMm, CARD_STOCK } from './layout.js';
 import { handInBox, TYPED_ONLY, MARKER_STROKE } from './hand.js';
 
@@ -35,8 +35,8 @@ const NEWS_INK = palette.newsInk;
 
 /** Kraft board: a warm base, soft mottling, short fibres. Pixel canvas, tiled on the box. */
 export function paintKraft(canvas) {
-    const g = canvas.getContext('2d');
-    const { width: W, height: H } = canvas;
+    const g = context2d(canvas, { label: 'kraft board' });
+    const { width: W, height: H } = canvas; // after the context: a refused canvas comes back smaller (context2d)
     const r = rng('kraft');
     g.fillStyle = palette.kraft;
     g.fillRect(0, 0, W, H);
@@ -342,12 +342,15 @@ export function halftone(g, image, x, y, w, h, { focusX = 0.5, focusY = 0.5, pit
         return;
     }
     // Sample the cropped photo on a grid a little finer than the screen.
-    const sw = Math.max(8, Math.round(w / (pitch * 0.5)));
-    const sh = Math.max(8, Math.round(h / (pitch * 0.5)));
     const sample = document.createElement('canvas');
-    sample.width = sw;
-    sample.height = sh;
-    const s = sample.getContext('2d', { willReadFrequently: true });
+    sample.width = Math.max(8, Math.round(w / (pitch * 0.5)));
+    sample.height = Math.max(8, Math.round(h / (pitch * 0.5)));
+    const s = context2d(sample, { options: { willReadFrequently: true }, label: 'halftone sample' });
+    // The grid is read back from the canvas: the size just set, unless the
+    // canvas cap refused it and context2d shrank it — a coarser sample of the
+    // same photo then, rather than one that runs off the end of the canvas.
+    const sw = sample.width;
+    const sh = sample.height;
     drawImageCover(s, image, 0, 0, sw, sh, { focusX, focusY });
     const px = s.getImageData(0, 0, sw, sh).data;
     const lum = (u, v) => {

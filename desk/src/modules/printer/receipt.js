@@ -2,6 +2,7 @@ import { PAPER } from './spec.js';
 import { mm } from '../../core/framing.js';
 import { rng as seeded } from '../../core/rng.js';
 import { FACES } from '../../core/fonts.js';
+import { context2d } from '../../core/draw.js';
 
 /**
  * The visitor receipt: what it says, how it is laid out, how it is painted.
@@ -445,12 +446,14 @@ export function drawStripReceipt(surface, data, { palette, grain }) {
 
 /** A standalone high-resolution PNG canvas of the receipt, torn at both ends, transparent round it. */
 export function renderReceiptPNG(data, { palette, grain }) {
-    const scratch = document.createElement('canvas').getContext('2d');
+    // Measuring only: a refused scratch canvas lays out as well at 1 × 1 (core/draw.js context2d).
+    const scratch = context2d(document.createElement('canvas'), { label: 'receipt layout scratch' });
     const layout = layoutReceipt(scratch, data, { mode: 'png' });
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(WIDTH * PNG_PX_PER_MM);
     canvas.height = Math.round(layout.length * PNG_PX_PER_MM);
-    const g = canvas.getContext('2d');
+    // The transform after the context, so a refused canvas saves a smaller PNG rather than a cropped one.
+    const g = context2d(canvas, { label: 'receipt PNG' });
     g.setTransform(canvas.width / WIDTH, 0, 0, canvas.height / layout.length, 0, 0);
     paintReceipt(g, data, layout, { palette, serrate: 'both', grain });
     return canvas;

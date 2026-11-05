@@ -73,6 +73,7 @@ desk/
 | `?time=morning\|day\|evening\|night` | the room's lighting preset |
 | `?lamp=on\|off` | force the desk lamp |
 | `?steam=0` | leave the mug's steam out |
+| `?tier=phone\|desktop` | force the device tier. `phone` is what touch-first devices get anyway: a lighter renderer and smaller textures, to fit in a phone's memory |
 | `?perf` | a small performance readout |
 
 `window.__desk` is there for debugging and tests: `go('#box/amazon')`,

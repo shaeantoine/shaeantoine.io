@@ -96,8 +96,14 @@ export function createContext({ deskScene, camera, navigate, currentRoute }) {
         track,
         rng,
 
+        /**
+         * makeCanvas(w, h, { fill?, framing?, oversample?, maxPixels? }) — see draw.js.
+         * Budgeted against the scene's texture budget height — the shorter
+         * side of its buffer, so an upright phone is not budgeted by a height
+         * its width-fitted shots never fill (scene/textureBudget.js).
+         */
         makeCanvas: (logicalWidth, logicalHeight, options = {}) => makeCanvas(logicalWidth, logicalHeight, {
-            bufferHeight: deskScene.getDrawingBufferHeight(),
+            bufferHeight: deskScene.getTextureBudgetHeight(),
             ...options
         }),
         canvasTexture: (canvas, options = {}) => canvasTexture(canvas, { anisotropy, ...options }),
